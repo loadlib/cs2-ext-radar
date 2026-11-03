@@ -6,17 +6,25 @@ const BROKERS = [
 const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
+const TEAM_COLOR = "#73a6f2";
+const ENEMY_COLOR = "#f24040";
+const SELF_COLOR = "#ffffff";
 
 const canvas = document.getElementById("map");
 const ctx = canvas.getContext("2d");
 const stateEl = document.getElementById("state");
-const headEl = document.getElementById("head");
 const mapNameEl = document.getElementById("map-name");
-const playersEl = document.getElementById("players");
 const clockEl = document.getElementById("clock");
+const phaseEl = document.getElementById("phase");
+const aliveEl = document.getElementById("alive");
+const bombEl = document.getElementById("bomb");
+const rateEl = document.getElementById("rate");
+const rosterBody = document.getElementById("roster-body");
+const rosterCount = document.getElementById("roster-count");
 const emptyEl = document.getElementById("empty");
 const roomInput = document.getElementById("room");
 const roomInput2 = document.getElementById("room2");
+const fullscreenBtn = document.getElementById("fullscreen");
 
 let maps = [];
 let room = (new URLSearchParams(location.search).get("room") || localStorage.getItem("cs2-room") || "").toUpperCase();
@@ -35,6 +43,7 @@ let pollTimer = 0;
 let tickTimer = 0;
 let raf = 0;
 let lastFrame = performance.now();
+const liveTimes = [];
 
 const players = new Map();
 let self = null;
@@ -72,20 +81,25 @@ function connect(code) {
   history.replaceState(null, "", url);
 
   emptyEl.hidden = true;
-  headEl.hidden = false;
   snapshot = null;
   snapshotTs = 0;
   lastSnapAt = 0;
   lastSnapEpoch = 0;
   liveAt = 0;
+  liveTimes.length = 0;
   players.clear();
   self = null;
   bomb = null;
   mapDef = null;
   mapImage = null;
   mapNameEl.textContent = "—";
-  playersEl.textContent = "0";
-  clockEl.textContent = "";
+  clockEl.textContent = "—";
+  phaseEl.textContent = "—";
+  aliveEl.textContent = "—";
+  bombEl.textContent = "—";
+  rateEl.textContent = "—";
+  rosterBody.textContent = "";
+  rosterCount.textContent = "0";
   setState("CONNECTING", "sync");
 
   stopLive();
@@ -96,15 +110,13 @@ function connect(code) {
 
 function startLive() {
   if (!window.mqtt) return;
-  // Two independent public brokers: whichever delivers first wins. Public
-  // brokers throttle long publish sessions, so the cheat also rotates sockets.
   for (const url of BROKERS) {
     const c = window.mqtt.connect(url, {
       clientId: `radar_${Math.random().toString(16).slice(2, 10)}`,
       clean: true,
       keepalive: 30,
       connectTimeout: 8000,
-      reconnectPeriod: 1000,
+      reconnectPeriod: 2000,
       protocolVersion: 4,
     });
     clients.push(c);
@@ -233,6 +245,8 @@ function accept(data, live) {
   lastSnapEpoch = Date.now();
   if (live) {
     liveAt = Date.now();
+    liveTimes.push(lastSnapAt);
+    while (liveTimes.length && lastSnapAt - liveTimes[0] > 2000) liveTimes.shift();
     setState("LIVE", "live");
   } else {
     setState("SYNC", "sync");
@@ -240,7 +254,8 @@ function accept(data, live) {
 
   ensureMap(data.map);
   updateEntities();
-  updateHead();
+  updateRoster();
+  updateMatch();
 }
 
 function ensureMap(name) {
@@ -327,6 +342,7 @@ function updateEntities() {
     self.ty = ly;
     self.tyaw = Number(local.yaw) || 0;
     self.team = Number(local.team) || 0;
+    self.hp = Number(local.hp) || 0;
     self.at = now;
   }
 
@@ -334,22 +350,154 @@ function updateEntities() {
     x: Array.isArray(snapshot.bomb.pos) ? Number(snapshot.bomb.pos[0]) : NaN,
     y: Array.isArray(snapshot.bomb.pos) ? Number(snapshot.bomb.pos[1]) : NaN,
     timer: Number(snapshot.bomb.timer) || 0,
+    site: snapshot.bomb.site || "",
     at: Date.now(),
   } : null;
 }
 
-function updateHead() {
+function teamName(team) {
+  if (team === 3) return "CT";
+  if (team === 2) return "T";
+  return team ? `TEAM ${team}` : "UNKNOWN";
+}
+
+function teamColor(team, localTeam) {
+  if (localTeam && team === localTeam) return TEAM_COLOR;
+  if (team === 3) return TEAM_COLOR;
+  return ENEMY_COLOR;
+}
+
+function updateRoster() {
   if (!snapshot) return;
-  playersEl.textContent = String(players.size);
+  const local = snapshot.local || {};
+  const localTeam = Number(local.team) || 0;
+  const localHp = Number(local.hp) || 0;
+  const list = [];
+  const lx = Number(local.x);
+  const ly = Number(local.y);
+  const hasLocal = localHp > 0 && Number.isFinite(lx) && Number.isFinite(ly);
+
+  if (hasLocal) {
+    list.push({
+      id: "you", team: localTeam, hp: localHp, armor: 0, weapon: "",
+      distance: 0, isLocal: true,
+    });
+  }
+
+  for (const player of snapshot.players || []) {
+    if (player.alive === false) continue;
+    const x = Number(player.x);
+    const y = Number(player.y);
+    let distance = 0;
+    if (hasLocal && Number.isFinite(x) && Number.isFinite(y)) {
+      distance = Math.hypot(x - lx, y - ly) * 0.0254;
+    }
+    list.push({
+      id: player.i !== undefined ? `#${player.i}` : "?",
+      team: Number(player.team) || 0,
+      hp: Number(player.hp) || 0,
+      armor: Number(player.armor) || 0,
+      weapon: String(player.weapon || "—"),
+      distance,
+      isLocal: false,
+    });
+  }
+
+  list.sort((a, b) => (a.isLocal ? -1 : b.isLocal ? 1 : a.distance - b.distance));
+  rosterCount.textContent = String(list.length);
+
+  const teams = new Map();
+  for (const player of list) {
+    if (!teams.has(player.team)) teams.set(player.team, []);
+    teams.get(player.team).push(player);
+  }
+  const order = [...teams.keys()].sort((a, b) => {
+    if (a === localTeam) return -1;
+    if (b === localTeam) return 1;
+    return b - a;
+  });
+
+  const html = [];
+  for (const team of order) {
+    const members = teams.get(team);
+    const color = teamColor(team, localTeam);
+    html.push(
+      `<div class="team-head"><span class="name"><i class="dot" style="background:${color}"></i>${teamName(team)}</span><span>${members.length}</span></div>`,
+    );
+    for (const player of members) {
+      const hp = Math.max(0, Math.min(100, player.hp));
+      const hpClass = hp <= 25 ? "low" : hp <= 50 ? "mid" : "";
+      const dist = player.isLocal || !player.distance ? "" : `${Math.round(player.distance)} m`;
+      html.push(
+        `<div class="row">`
+        + `<div class="row-top"><i class="dot" style="background:${color}"></i>`
+        + `<span class="who">${player.id}</span>`
+        + `<span class="weapon">${escapeHtml(player.weapon)}</span>`
+        + `<span class="dist">${dist}</span></div>`
+        + `<div class="row-bot"><div class="hp-bar"><i class="${hpClass}" style="width:${hp}%"></i></div>`
+        + `<span class="armor">${player.armor ? `A${player.armor}` : ""}</span>`
+        + `<span class="hp">${Math.round(hp)}</span></div>`
+        + `</div>`,
+      );
+    }
+  }
+  rosterBody.innerHTML = html.join("");
+}
+
+function updateMatch() {
+  if (!snapshot) return;
   const round = snapshot.round || {};
   clockEl.textContent = clockText(round);
+  phaseEl.textContent = phaseLabel(round);
+
+  let ct = 0;
+  let t = 0;
+  const local = snapshot.local || {};
+  if ((Number(local.hp) || 0) > 0) {
+    if (Number(local.team) === 3) ct++;
+    else if (Number(local.team) === 2) t++;
+  }
+  for (const player of snapshot.players || []) {
+    if (player.alive === false) continue;
+    if (Number(player.team) === 3) ct++;
+    else if (Number(player.team) === 2) t++;
+  }
+  aliveEl.textContent = `CT ${ct} · T ${t}`;
+
+  if (bomb) {
+    const left = Math.max(0, bomb.timer - (Date.now() - bomb.at) / 1000);
+    const site = bomb.site ? ` ${bomb.site}` : "";
+    bombEl.textContent = `${site} ${Math.ceil(left)}s`;
+  } else {
+    bombEl.textContent = "—";
+  }
+
+  if (liveTimes.length >= 2) {
+    const span = (liveTimes[liveTimes.length - 1] - liveTimes[0]) / 1000;
+    const rate = span > 0 ? (liveTimes.length - 1) / span : 0;
+    rateEl.textContent = `${rate.toFixed(0)} Hz`;
+  } else {
+    rateEl.textContent = "—";
+  }
+}
+
+function phaseLabel(round) {
+  if (round.freeze) return "FREEZE";
+  if (Number(round.phase) === 2) return "LIVE";
+  if (Number(round.phase) === 3) return "END";
+  return "—";
 }
 
 function clockText(round) {
   const remaining = Math.max(0, Number(round.time || 0) - (Date.now() - lastSnapEpoch) / 1000);
   const seconds = Math.floor(remaining);
-  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-  return round.bomb ? `${clock} BOMB` : clock;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
 }
 
 function resize() {
@@ -405,6 +553,7 @@ function draw(now) {
   ctx.clearRect(0, 0, width, height);
 
   const view = Math.min(width, height) * 0.94;
+  const unit = Math.max(0.7, Math.min(3.2, view / 420));
   const ox = (width - view) / 2;
   const oy = (height - view) / 2;
 
@@ -424,8 +573,8 @@ function draw(now) {
     oy + ((mapDef.pos_y - y) / (MAP_SIZE * scale)) * view,
   ];
 
-  ctx.font = "600 11px Inter, sans-serif";
-  ctx.fillStyle = "rgba(216, 184, 74, .7)";
+  ctx.font = `600 ${Math.round(11 * unit)}px Inter, sans-serif`;
+  ctx.fillStyle = "rgba(216, 184, 74, .75)";
   for (const [label, pair] of Object.entries(mapDef.sites || {})) {
     if (!Array.isArray(pair) || pair.length < 2) continue;
     ctx.fillText(label.toUpperCase(), ox + Number(pair[0]) * view + 3,
@@ -439,45 +588,55 @@ function draw(now) {
 
   for (const p of players.values()) {
     const [x, y] = point(p.x, p.y);
-    const color = p.sameTeam ? "#6fa8ff" : "#e06c75";
-    ctx.globalAlpha = p.visible ? 1 : 0.5;
-    cone(x, y, p.yaw, color, 14);
-    ctx.fillStyle = color;
-    dot(x, y, 4);
+    const color = p.sameTeam ? TEAM_COLOR : ENEMY_COLOR;
+    cone(x, y, p.yaw, color, 9 * unit, 3.5 * unit, 2 * unit);
+    dot(x, y, 3.2 * unit, color);
   }
-  ctx.globalAlpha = 1;
 
   if (self) {
     const [x, y] = point(self.x, self.y);
-    cone(x, y, self.yaw, "#f2f4ff", 16);
-    ctx.fillStyle = "#f2f4ff";
-    dot(x, y, 4.5);
+    arrow(x, y, self.yaw, SELF_COLOR, 8 * unit, 4 * unit, 4.5 * unit);
   }
 
   if (bomb && Number.isFinite(bomb.x) && Number.isFinite(bomb.y)) {
     const [x, y] = point(bomb.x, bomb.y);
     const left = Math.max(0, bomb.timer - (Date.now() - bomb.at) / 1000);
-    ctx.fillStyle = "#e0a35c";
-    ctx.fillRect(x - 4, y - 4, 8, 8);
-    ctx.font = "10px 'JetBrains Mono', Consolas, monospace";
-    ctx.fillText(String(Math.ceil(left)), x + 8, y - 5);
+    ctx.fillStyle = "#ff5950";
+    ctx.fillRect(x - 4 * unit, y - 4 * unit, 8 * unit, 8 * unit);
+    ctx.font = `${Math.round(10 * unit)}px 'JetBrains Mono', Consolas, monospace`;
+    ctx.fillText(String(Math.ceil(left)), x + 8 * unit, y - 5 * unit);
   }
 }
 
-function cone(x, y, yaw, color, length) {
+// Same shape as the cheat radar: tip forward, 3.5 base half-width, 2 back.
+function cone(x, y, yaw, color, length, half, back) {
   const angle = (yaw * Math.PI) / 180;
   const dx = Math.cos(angle);
   const dy = -Math.sin(angle);
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(x + dx * length, y + dy * length);
-  ctx.lineTo(x - dy * 6 - dx * 2, y + dx * 6 - dy * 2);
-  ctx.lineTo(x + dy * 6 - dx * 2, y - dx * 6 - dy * 2);
+  ctx.lineTo(x - dy * half - dx * back, y + dx * half - dy * back);
+  ctx.lineTo(x + dy * half - dx * back, y - dx * half - dy * back);
   ctx.closePath();
   ctx.fill();
 }
 
-function dot(x, y, radius) {
+function arrow(x, y, yaw, color, tip, back, half) {
+  const angle = (yaw * Math.PI) / 180;
+  const dx = Math.cos(angle);
+  const dy = -Math.sin(angle);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + dx * tip, y + dy * tip);
+  ctx.lineTo(x - dx * back + -dy * half, y - dy * back + dx * half);
+  ctx.lineTo(x - dx * back - -dy * half, y - dy * back - dx * half);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function dot(x, y, radius, color) {
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
@@ -496,6 +655,14 @@ function sanitize(input) {
   input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 }
 
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+
 document.getElementById("connect").addEventListener("submit", (event) => {
   event.preventDefault();
   connect(roomInput.value);
@@ -506,19 +673,43 @@ document.getElementById("empty-form").addEventListener("submit", (event) => {
   connect(roomInput2.value);
 });
 
+fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+const shell = document.querySelector(".shell");
+document.getElementById("toggle-roster").addEventListener("click", () => {
+  shell.classList.toggle("show-roster");
+  shell.classList.remove("show-match");
+});
+document.getElementById("toggle-match").addEventListener("click", () => {
+  shell.classList.toggle("show-match");
+  shell.classList.remove("show-roster");
+});
+
+document.addEventListener("fullscreenchange", () => {
+  fullscreenBtn.setAttribute("aria-pressed", document.fullscreenElement ? "true" : "false");
+  resize();
+});
+
+document.addEventListener("keydown", (event) => {
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (event.key.toLowerCase() === "f") {
+    event.preventDefault();
+    toggleFullscreen();
+  }
+});
+
 roomInput.addEventListener("input", () => sanitize(roomInput));
 roomInput2.addEventListener("input", () => sanitize(roomInput2));
 
-new ResizeObserver(() => {
-  resize();
-}).observe(canvas);
+new ResizeObserver(() => resize()).observe(canvas);
 
 tickTimer = setInterval(() => {
   if (!room) return;
   if (liveAt && Date.now() - liveAt > 2500) {
     setState(snapshot ? "SYNC" : "WAITING", "sync");
   }
-  if (snapshot) clockEl.textContent = clockText(snapshot.round || {});
+  if (snapshot) updateMatch();
 }, 1000);
 
 loadMaps().then(() => {
@@ -527,10 +718,15 @@ loadMaps().then(() => {
   if (room.length >= 4) connect(room);
 });
 
-// Debug hook used by the visual QA pass; no gameplay data beyond the snapshot.
 window.__radar = () => ({
   players: [...players.values()],
   self,
   map: mapDef,
   snapshot,
 });
+
+// Forces one frame for visual QA when rAF is paused (background tab).
+window.__radarDraw = () => {
+  lastFrame = performance.now();
+  draw(lastFrame);
+};

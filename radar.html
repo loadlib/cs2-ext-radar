@@ -16,22 +16,52 @@
       <button type="submit">CONNECT</button>
     </form>
     <div class="state" id="state">OFFLINE</div>
+    <button class="icon panel-toggle" id="toggle-roster" title="Players" aria-label="Toggle players">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+        <path d="M3 4h10M3 8h10M3 12h10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="icon panel-toggle" id="toggle-match" title="Match" aria-label="Toggle match">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 7v4M8 5v.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="icon" id="fullscreen" title="Fullscreen (F)" aria-label="Toggle fullscreen">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+        <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
   </header>
 
-  <main>
-    <canvas id="map" aria-label="Live radar"></canvas>
-    <div class="head" id="head" hidden>
-      <span><b id="map-name">—</b></span>
-      <span><b id="players">0</b> players</span>
-      <span id="clock"></span>
-    </div>
-    <div class="empty" id="empty">
-      <form id="empty-form">
-        <input id="room2" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
-        <button type="submit">OPEN</button>
-      </form>
-    </div>
-  </main>
+  <div class="shell">
+    <aside class="panel roster" id="roster">
+      <div class="panel-head">PLAYERS <span class="mono" id="roster-count">0</span></div>
+      <div id="roster-body"></div>
+    </aside>
+
+    <main class="stage">
+      <canvas id="map" aria-label="Live radar"></canvas>
+      <div class="empty" id="empty">
+        <form id="empty-form">
+          <input id="room2" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
+          <button type="submit">OPEN</button>
+        </form>
+      </div>
+    </main>
+
+    <aside class="panel match" id="match">
+      <div class="panel-head">MATCH</div>
+      <div class="timer mono" id="clock">—</div>
+      <div class="stats">
+        <div class="stat"><span>map</span><b id="map-name">—</b></div>
+        <div class="stat"><span>phase</span><b id="phase">—</b></div>
+        <div class="stat"><span>alive</span><b id="alive">—</b></div>
+        <div class="stat"><span>bomb</span><b id="bomb">—</b></div>
+        <div class="stat"><span>rate</span><b id="rate">—</b></div>
+      </div>
+    </aside>
+  </div>
 
   <script src="js/mqtt.min.js"></script>
   <script type="module" src="js/radar.js"></script>
