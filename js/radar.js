@@ -514,26 +514,11 @@ function escapeHtml(value) {
   }[ch]));
 }
 
-function updateSheetSide() {
-  const rect = canvas.getBoundingClientRect();
-  const view = Math.min(rect.width, rect.height)
-    * (document.body.classList.contains("radar-fullscreen") ? 0.99 : 0.94);
-  const mapTop = rect.top + (rect.height - view) / 2;
-  const mapBottom = mapTop + view;
-  const freeTop = mapTop;
-  const freeBottom = window.innerHeight - mapBottom;
-  // Prefer the bottom sheet unless the top margin is clearly larger.
-  const bottomWins = freeBottom + 120 >= freeTop;
-  document.body.classList.toggle("sheet-bottom", bottomWins);
-  document.body.classList.toggle("sheet-top", !bottomWins);
-}
-
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   canvas.width = Math.max(1, Math.floor(rect.width * dpr));
   canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  updateSheetSide();
 }
 
 function frame(now) {
@@ -814,7 +799,6 @@ fullscreenBtn.addEventListener("click", toggleFullscreen);
 const shell = document.querySelector(".shell");
 document.getElementById("toggle-teams").addEventListener("click", () => {
   shell.classList.toggle("show-teams");
-  updateSheetSide();
 });
 followBtn.addEventListener("click", toggleFollow);
 

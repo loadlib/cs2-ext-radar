@@ -325,22 +325,31 @@ body.radar-fullscreen #map { cursor: pointer; }
 
 @media (max-width: 900px) {
   .shell {
-    position: relative;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .stage {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .team-panel {
     display: none;
-    position: absolute;
-    top: 8px;
-    bottom: 8px;
-    width: min(250px, 45vw);
-    z-index: 6;
+    position: static;
+    grid-row: 2;
+    width: auto;
+    height: min(38vh, 280px);
     border: 1px solid var(--border);
+    border-bottom: 0;
   }
 
-  .team-panel.ct { left: 8px; }
-  .team-panel.t { right: 8px; }
+  .team-panel.ct {
+    grid-column: 1;
+    border-right: 0;
+  }
+
+  .team-panel.t { grid-column: 2; }
 
   .shell.show-teams .team-panel { display: block; }
 
@@ -348,23 +357,6 @@ body.radar-fullscreen #map { cursor: pointer; }
   .mark { display: none; }
   .connect { margin-left: 0; flex: 1; }
   .connect input { flex: 1; width: auto; }
-}
-
-@media (max-width: 700px) {
-  .team-panel {
-    left: 8px;
-    right: 8px;
-    width: auto;
-    height: min(42vh, 300px);
-    top: auto;
-    bottom: auto;
-  }
-
-  .team-panel.ct { right: 50%; margin-right: 4px; }
-  .team-panel.t { left: 50%; margin-left: 4px; }
-
-  .sheet-bottom .team-panel { bottom: 8px; }
-  .sheet-top .team-panel { top: 8px; }
 }
 
 @media (max-width: 520px) {
