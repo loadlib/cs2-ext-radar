@@ -1,18 +1,20 @@
 :root {
-  --bg: #0b0d12;
-  --surface: #11141b;
-  --panel: #161a23;
-  --control: #1c2130;
-  --border: #262c3a;
-  --text: #d9dee9;
-  --muted: #8c93a5;
-  --accent: #7c9cff;
+  --bg: #0b0c10;
+  --surface: #101218;
+  --panel: #141720;
+  --control: #191d27;
+  --border: #252a36;
+  --text: #d7dbe5;
+  --muted: #7f8797;
+  --accent: #8cbfff;
+  --accent-ink: #071018;
   --enemy: #e06c75;
   --team: #6fa8ff;
-  --success: #6fcf97;
-  --danger: #e06c75;
-  --radius: 8px;
-  --gap: 8px;
+  --self: #f2f4ff;
+  --bomb: #e0a35c;
+  --ok: #6fcf97;
+  --bad: #e06c75;
+  --radius: 6px;
   --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Mono", monospace;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
 }

@@ -9,39 +9,31 @@
   <link rel="stylesheet" href="css/radar.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span></span> CS2 RADAR</div>
+  <header class="bar">
+    <div class="mark">CS2 RADAR</div>
     <form class="connect" id="connect">
-      <input id="room" maxlength="6" placeholder="SESSION" autocomplete="off" spellcheck="false">
+      <input id="room" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
       <button type="submit">CONNECT</button>
     </form>
-    <div class="status" id="status">offline</div>
+    <div class="state" id="state">OFFLINE</div>
   </header>
 
   <main>
-    <canvas id="map"></canvas>
-    <section class="info">
-      <h1>SESSION <span class="mono" id="session">—</span></h1>
-      <dl>
-        <dt>map</dt><dd id="map-name">—</dd>
-        <dt>players</dt><dd id="players">0</dd>
-        <dt>round</dt><dd id="round">—</dd>
-        <dt>updated</dt><dd id="updated">—</dd>
-      </dl>
-    </section>
-    <div class="legend">
-      <span><i style="background:var(--team)"></i>team</span>
-      <span><i style="background:var(--enemy)"></i>enemy</span>
-      <span><i style="background:var(--danger)"></i>bomb</span>
+    <canvas id="map" aria-label="Live radar"></canvas>
+    <div class="head" id="head" hidden>
+      <span><b id="map-name">—</b></span>
+      <span><b id="players">0</b> players</span>
+      <span id="clock"></span>
     </div>
     <div class="empty" id="empty">
-      <div>
-        <h2>Enter a session code</h2>
-        <p>Open the cheat menu → Cloud and type the 6-character code here.</p>
-      </div>
+      <form id="empty-form">
+        <input id="room2" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
+        <button type="submit">OPEN</button>
+      </form>
     </div>
   </main>
 
+  <script src="js/mqtt.min.js"></script>
   <script type="module" src="js/radar.js"></script>
 </body>
 </html>
