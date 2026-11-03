@@ -3,6 +3,7 @@ const BROKERS = [
   "wss://broker.hivemq.com:8884/mqtt",
   "wss://broker.emqx.io:8084/mqtt",
 ];
+const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
 
@@ -28,6 +29,8 @@ let mapDef = null;
 let mapImage = null;
 let mapLoading = false;
 let clients = [];
+let pusherSocket = null;
+let pusherTimer = 0;
 let pollTimer = 0;
 let tickTimer = 0;
 let raf = 0;
@@ -87,6 +90,7 @@ function connect(code) {
 
   stopLive();
   startLive();
+  startPusher();
   startPolling();
 }
 
@@ -134,6 +138,68 @@ function stopLive() {
     try { c.end(true); } catch (error) {}
   }
   clients = [];
+  clearTimeout(pusherTimer);
+  pusherTimer = 0;
+  if (pusherSocket) {
+    const socket = pusherSocket;
+    pusherSocket = null;
+    try { socket.close(); } catch (error) {}
+  }
+}
+
+function startPusher() {
+  if (!PUSHER.key || !window.WebSocket) return;
+  const forRoom = room;
+  const socket = new WebSocket(
+    `wss://ws-${PUSHER.cluster}.pusher.com/app/${PUSHER.key}?protocol=7&client=cs2radar&version=1.0&flash=false`,
+  );
+  pusherSocket = socket;
+
+  socket.onmessage = (event) => {
+    if (room !== forRoom) return;
+    let message = null;
+    try { message = JSON.parse(event.data); } catch (error) { return; }
+    if (!message || !message.event) return;
+
+    if (message.event === "pusher:connection_established") {
+      socket.send(JSON.stringify({
+        event: "pusher:subscribe",
+        data: { channel: `room-${room}` },
+      }));
+      return;
+    }
+    if (message.event === "pusher_internal:subscription_succeeded") {
+      if (!liveAt) setState("WAITING", "sync");
+      return;
+    }
+    if (message.event === "pusher:ping") {
+      socket.send(JSON.stringify({ event: "pusher:pong", data: {} }));
+      return;
+    }
+    if (message.event === "pusher:error") {
+      console.warn("pusher", message.data);
+      return;
+    }
+    if (message.event === "snapshot") {
+      try {
+        const data = typeof message.data === "string" ? JSON.parse(message.data) : message.data;
+        accept(data, true);
+      } catch (error) {
+        console.warn("pusher payload", error);
+      }
+    }
+  };
+
+  socket.onclose = () => {
+    if (pusherSocket !== socket) return;
+    pusherSocket = null;
+    clearTimeout(pusherTimer);
+    pusherTimer = setTimeout(() => {
+      if (room === forRoom) startPusher();
+    }, 1500);
+  };
+
+  socket.onerror = () => {};
 }
 
 function startPolling() {
