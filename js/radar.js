@@ -56,6 +56,7 @@ let bomb = null;
 let lastRosterKey = "";
 let followMode = false;
 let selectedId = "self";
+let followLast = null;
 let camYaw = 0;
 let camInit = false;
 const FOLLOW_ZOOM = 2.6;
@@ -116,6 +117,7 @@ function connect(code) {
   lastRosterKey = "";
   followMode = false;
   selectedId = "self";
+  followLast = null;
   camInit = false;
   updateFollowButton();
   setState("CONNECTING", "sync");
@@ -304,6 +306,14 @@ function loadMapImage(local, cdn) {
   image.src = local || cdn;
 }
 
+function playerKey(player, index) {
+  const steam = String(player.steam || "");
+  if (steam && steam !== "0") return `s${steam}`;
+  const name = String(player.name || "").trim();
+  if (name && name !== "player") return `n${name}_${Number(player.team) || 0}`;
+  return player.i !== undefined ? `p${player.i}` : `x${index}`;
+}
+
 function updateEntities() {
   if (!snapshot) return;
   const local = snapshot.local || {};
@@ -314,7 +324,7 @@ function updateEntities() {
   for (let index = 0; index < list.length; index++) {
     const player = list[index];
     if (player.alive === false) continue;
-    const id = player.i !== undefined ? `p${player.i}` : `x${index}`;
+    const id = playerKey(player, index);
     seen.add(id);
     const x = Number(player.x);
     const y = Number(player.y);
@@ -391,7 +401,9 @@ function updateRoster() {
     });
   }
 
-  for (const player of snapshot.players || []) {
+  const roster = snapshot.players || [];
+  for (let index = 0; index < roster.length; index++) {
+    const player = roster[index];
     if (player.alive === false) continue;
     const x = Number(player.x);
     const y = Number(player.y);
@@ -401,7 +413,7 @@ function updateRoster() {
     }
     list.push({
       id: player.i !== undefined ? `#${player.i}` : "?",
-      key: player.i !== undefined ? `p${player.i}` : "",
+      key: playerKey(player, index),
       name: String(player.name || "").trim() || "player",
       avatar: String(player.avatar || ""),
       team: Number(player.team) || 0,
@@ -570,8 +582,12 @@ function shortestAngle(delta) {
 
 function followTarget() {
   if (!followMode) return null;
-  if (selectedId === "self") return self;
-  return players.get(selectedId) || self || null;
+  const target = selectedId === "self" ? self : players.get(selectedId);
+  if (target) {
+    followLast = { x: target.x, y: target.y, yaw: Number(target.yaw) || 0 };
+    return target;
+  }
+  return followLast || self || null;
 }
 
 function updateFollowButton() {
@@ -583,6 +599,7 @@ function selectPlayer(key) {
   if (!key) return;
   selectedId = key;
   followMode = true;
+  followLast = null;
   camInit = false;
   updateFollowButton();
   lastRosterKey = "";
@@ -592,6 +609,7 @@ function selectPlayer(key) {
 function toggleFollow() {
   followMode = !followMode;
   if (followMode) {
+    followLast = null;
     camInit = false;
     if (!selectedId) selectedId = "self";
   }
@@ -803,9 +821,11 @@ document.getElementById("toggle-teams").addEventListener("click", () => {
 followBtn.addEventListener("click", toggleFollow);
 
 for (const body of [ctBody, tBody]) {
-  body.addEventListener("click", (event) => {
+  body.addEventListener("pointerdown", (event) => {
     const row = event.target.closest(".row");
-    if (row) selectPlayer(row.dataset.key);
+    if (!row) return;
+    event.preventDefault();
+    selectPlayer(row.dataset.key);
   });
 }
 
