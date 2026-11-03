@@ -26,7 +26,7 @@
     document.getElementById("connect").addEventListener("submit", (event) => {
       event.preventDefault();
       const room = document.getElementById("room").value.trim().toUpperCase();
-      if (room.length >= 4) location.href = `radar.html?room=${encodeURIComponent(room)}`;
+      if (room.length >= 4) location.href = `radar.html?room=${encodeURIComponent(room)}&go=1`;
     });
     const input = document.getElementById("room");
     input.addEventListener("input", () => {

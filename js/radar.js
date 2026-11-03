@@ -29,7 +29,9 @@ const roomInput2 = document.getElementById("room2");
 const fullscreenBtn = document.getElementById("fullscreen");
 
 let maps = [];
-let room = (new URLSearchParams(location.search).get("room") || localStorage.getItem("cs2-room") || "").toUpperCase();
+let room = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
+const autoConnect = new URLSearchParams(location.search).get("go") === "1";
+localStorage.removeItem("cs2-room");
 let snapshot = null;
 let snapshotTs = 0;
 let lastSnapAt = 0;
@@ -53,6 +55,7 @@ let bomb = null;
 let lastRosterKey = "";
 
 roomInput.value = room;
+roomInput2.value = room;
 
 function setState(text, kind) {
   stateEl.textContent = text;
@@ -78,7 +81,6 @@ function connect(code) {
 
   roomInput.value = room;
   roomInput2.value = room;
-  localStorage.setItem("cs2-room", room);
   const url = new URL(location.href);
   url.searchParams.set("room", room);
   history.replaceState(null, "", url);
@@ -725,7 +727,7 @@ tickTimer = setInterval(() => {
 loadMaps().then(() => {
   resize();
   raf = requestAnimationFrame(frame);
-  if (room.length >= 4) connect(room);
+  if (autoConnect && room.length >= 4) connect(room);
 });
 
 window.__radar = () => ({
