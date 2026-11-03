@@ -16,15 +16,14 @@
       <button type="submit">CONNECT</button>
     </form>
     <div class="state" id="state">OFFLINE</div>
-    <button class="icon panel-toggle" id="toggle-roster" title="Players" aria-label="Toggle players">
+    <button class="icon panel-toggle" id="toggle-ct" title="Counter-Terrorists" aria-label="Toggle CT panel">
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
         <path d="M3 4h10M3 8h10M3 12h10" fill="none" stroke="currentColor" stroke-width="1.5"/>
       </svg>
     </button>
-    <button class="icon panel-toggle" id="toggle-match" title="Match" aria-label="Toggle match">
+    <button class="icon panel-toggle" id="toggle-t" title="Terrorists" aria-label="Toggle T panel">
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M8 7v4M8 5v.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M3 4h10M3 8h10M3 12h10" fill="none" stroke="currentColor" stroke-width="1.5"/>
       </svg>
     </button>
     <button class="icon" id="fullscreen" title="Fullscreen (F)" aria-label="Toggle fullscreen">
@@ -34,10 +33,19 @@
     </button>
   </header>
 
+  <div class="matchbar">
+    <div class="mb"><span>map</span><b id="map-name">—</b></div>
+    <div class="mb timer"><b id="clock">—</b></div>
+    <div class="mb"><span>phase</span><b id="phase">—</b></div>
+    <div class="mb"><span>alive</span><b id="alive">—</b></div>
+    <div class="mb"><span>bomb</span><b id="bomb">—</b></div>
+    <div class="mb"><span>rate</span><b id="rate">—</b></div>
+  </div>
+
   <div class="shell">
-    <aside class="panel roster" id="roster">
-      <div class="panel-head">PLAYERS <span class="mono" id="roster-count">0</span></div>
-      <div id="roster-body"></div>
+    <aside class="panel team-panel ct" id="ct-panel">
+      <div class="panel-head"><span class="team-name"><i class="dot"></i>CT</span><span class="mono" id="ct-count">0</span></div>
+      <div id="ct-body"></div>
     </aside>
 
     <main class="stage">
@@ -50,16 +58,9 @@
       </div>
     </main>
 
-    <aside class="panel match" id="match">
-      <div class="panel-head">MATCH</div>
-      <div class="timer mono" id="clock">—</div>
-      <div class="stats">
-        <div class="stat"><span>map</span><b id="map-name">—</b></div>
-        <div class="stat"><span>phase</span><b id="phase">—</b></div>
-        <div class="stat"><span>alive</span><b id="alive">—</b></div>
-        <div class="stat"><span>bomb</span><b id="bomb">—</b></div>
-        <div class="stat"><span>rate</span><b id="rate">—</b></div>
-      </div>
+    <aside class="panel team-panel t" id="t-panel">
+      <div class="panel-head"><span class="team-name"><i class="dot"></i>T</span><span class="mono" id="t-count">0</span></div>
+      <div id="t-body"></div>
     </aside>
   </div>
 

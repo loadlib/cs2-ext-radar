@@ -19,8 +19,10 @@ const phaseEl = document.getElementById("phase");
 const aliveEl = document.getElementById("alive");
 const bombEl = document.getElementById("bomb");
 const rateEl = document.getElementById("rate");
-const rosterBody = document.getElementById("roster-body");
-const rosterCount = document.getElementById("roster-count");
+const ctBody = document.getElementById("ct-body");
+const tBody = document.getElementById("t-body");
+const ctCount = document.getElementById("ct-count");
+const tCount = document.getElementById("t-count");
 const emptyEl = document.getElementById("empty");
 const roomInput = document.getElementById("room");
 const roomInput2 = document.getElementById("room2");
@@ -48,6 +50,7 @@ const liveTimes = [];
 const players = new Map();
 let self = null;
 let bomb = null;
+let lastRosterKey = "";
 
 roomInput.value = room;
 
@@ -98,8 +101,11 @@ function connect(code) {
   aliveEl.textContent = "—";
   bombEl.textContent = "—";
   rateEl.textContent = "—";
-  rosterBody.textContent = "";
-  rosterCount.textContent = "0";
+  ctBody.textContent = "";
+  tBody.textContent = "";
+  ctCount.textContent = "0";
+  tCount.textContent = "0";
+  lastRosterKey = "";
   setState("CONNECTING", "sync");
 
   stopLive();
@@ -355,32 +361,21 @@ function updateEntities() {
   } : null;
 }
 
-function teamName(team) {
-  if (team === 3) return "CT";
-  if (team === 2) return "T";
-  return team ? `TEAM ${team}` : "UNKNOWN";
-}
-
-function teamColor(team, localTeam) {
-  if (localTeam && team === localTeam) return TEAM_COLOR;
-  if (team === 3) return TEAM_COLOR;
-  return ENEMY_COLOR;
-}
-
 function updateRoster() {
   if (!snapshot) return;
   const local = snapshot.local || {};
   const localTeam = Number(local.team) || 0;
   const localHp = Number(local.hp) || 0;
-  const list = [];
   const lx = Number(local.x);
   const ly = Number(local.y);
   const hasLocal = localHp > 0 && Number.isFinite(lx) && Number.isFinite(ly);
+  const list = [];
 
   if (hasLocal) {
     list.push({
-      id: "you", team: localTeam, hp: localHp, armor: 0, weapon: "",
-      distance: 0, isLocal: true,
+      id: "you", name: String(local.name || "you").trim() || "you",
+      avatar: String(local.avatar || ""), team: localTeam,
+      hp: localHp, armor: 0, weapon: "", distance: 0, isLocal: true,
     });
   }
 
@@ -394,54 +389,58 @@ function updateRoster() {
     }
     list.push({
       id: player.i !== undefined ? `#${player.i}` : "?",
+      name: String(player.name || "").trim() || "player",
+      avatar: String(player.avatar || ""),
       team: Number(player.team) || 0,
       hp: Number(player.hp) || 0,
       armor: Number(player.armor) || 0,
-      weapon: String(player.weapon || "—"),
+      weapon: String(player.weapon || ""),
       distance,
       isLocal: false,
     });
   }
 
-  list.sort((a, b) => (a.isLocal ? -1 : b.isLocal ? 1 : a.distance - b.distance));
-  rosterCount.textContent = String(list.length);
-
-  const teams = new Map();
-  for (const player of list) {
-    if (!teams.has(player.team)) teams.set(player.team, []);
-    teams.get(player.team).push(player);
+  const ct = list.filter((player) => player.team === 3);
+  const t = list.filter((player) => player.team === 2);
+  const other = list.filter((player) => player.team !== 2 && player.team !== 3);
+  if (localTeam !== 2 && localTeam !== 3) {
+    (localTeam === 3 ? ct : t).push(...other);
   }
-  const order = [...teams.keys()].sort((a, b) => {
-    if (a === localTeam) return -1;
-    if (b === localTeam) return 1;
-    return b - a;
-  });
 
-  const html = [];
-  for (const team of order) {
-    const members = teams.get(team);
-    const color = teamColor(team, localTeam);
-    html.push(
-      `<div class="team-head"><span class="name"><i class="dot" style="background:${color}"></i>${teamName(team)}</span><span>${members.length}</span></div>`,
-    );
-    for (const player of members) {
-      const hp = Math.max(0, Math.min(100, player.hp));
-      const hpClass = hp <= 25 ? "low" : hp <= 50 ? "mid" : "";
-      const dist = player.isLocal || !player.distance ? "" : `${Math.round(player.distance)} m`;
-      html.push(
-        `<div class="row">`
-        + `<div class="row-top"><i class="dot" style="background:${color}"></i>`
-        + `<span class="who">${player.id}</span>`
-        + `<span class="weapon">${escapeHtml(player.weapon)}</span>`
-        + `<span class="dist">${dist}</span></div>`
-        + `<div class="row-bot"><div class="hp-bar"><i class="${hpClass}" style="width:${hp}%"></i></div>`
-        + `<span class="armor">${player.armor ? `A${player.armor}` : ""}</span>`
-        + `<span class="hp">${Math.round(hp)}</span></div>`
-        + `</div>`,
-      );
-    }
-  }
-  rosterBody.innerHTML = html.join("");
+  ctCount.textContent = String(ct.length);
+  tCount.textContent = String(t.length);
+
+  const key = JSON.stringify(list.map((player) => [
+    player.id, player.team, player.hp, player.armor, player.weapon,
+    player.name, player.avatar, Math.round(player.distance),
+  ]));
+  if (key === lastRosterKey) return;
+  lastRosterKey = key;
+
+  ctBody.innerHTML = ct.length ? ct.map(rowHtml).join("")
+    : `<div class="empty-team">no players</div>`;
+  tBody.innerHTML = t.length ? t.map(rowHtml).join("")
+    : `<div class="empty-team">no players</div>`;
+}
+
+function rowHtml(player) {
+  const hp = Math.max(0, Math.min(100, player.hp));
+  const hpClass = hp <= 25 ? "low" : hp <= 50 ? "mid" : "";
+  const dist = player.isLocal || !player.distance ? "" : `${Math.round(player.distance)} m`;
+  const letter = (player.name[0] || "?").toUpperCase();
+  const avatar = player.avatar
+    ? `<img src="${escapeHtml(player.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    : "";
+  return `<div class="row">`
+    + `<div class="avatar"><span class="letter">${escapeHtml(letter)}</span>${avatar}</div>`
+    + `<div class="info">`
+    + `<div class="line1"><span class="nick" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>`
+    + `<span class="dist">${dist}</span></div>`
+    + `<div class="line2"><span class="weapon">${escapeHtml(player.weapon)}</span>`
+    + `${player.armor ? `<span class="armor">A${player.armor}</span>` : ""}`
+    + `<span class="hp">${Math.round(hp)}</span></div>`
+    + `<div class="hp-bar"><i class="${hpClass}" style="width:${hp}%"></i></div>`
+    + `</div></div>`;
 }
 
 function updateMatch() {
@@ -678,13 +677,13 @@ document.getElementById("empty-form").addEventListener("submit", (event) => {
 fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 const shell = document.querySelector(".shell");
-document.getElementById("toggle-roster").addEventListener("click", () => {
-  shell.classList.toggle("show-roster");
-  shell.classList.remove("show-match");
+document.getElementById("toggle-ct").addEventListener("click", () => {
+  shell.classList.toggle("show-ct");
+  shell.classList.remove("show-t");
 });
-document.getElementById("toggle-match").addEventListener("click", () => {
-  shell.classList.toggle("show-match");
-  shell.classList.remove("show-roster");
+document.getElementById("toggle-t").addEventListener("click", () => {
+  shell.classList.toggle("show-t");
+  shell.classList.remove("show-ct");
 });
 
 document.addEventListener("fullscreenchange", () => {
