@@ -256,6 +256,23 @@
   color: var(--muted);
 }
 
+body.radar-fullscreen .bar,
+body.radar-fullscreen .matchbar,
+body.radar-fullscreen .team-panel {
+  display: none;
+}
+
+body.radar-fullscreen .shell {
+  display: block;
+  height: 100vh;
+  height: 100dvh;
+}
+
+body.radar-fullscreen .stage {
+  width: 100%;
+  height: 100%;
+}
+
 .stage {
   position: relative;
   min-width: 0;

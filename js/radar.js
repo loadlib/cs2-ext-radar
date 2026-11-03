@@ -553,7 +553,8 @@ function draw(now) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const view = Math.min(width, height) * 0.94;
+  const view = Math.min(width, height)
+    * (document.body.classList.contains("radar-fullscreen") ? 0.99 : 0.94);
   const unit = Math.max(0.7, Math.min(3.2, view / 420));
   const ox = (width - view) / 2;
   const oy = (height - view) / 2;
@@ -663,6 +664,14 @@ function toggleFullscreen() {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 }
+
+function syncFullscreenLayout() {
+  document.body.classList.toggle("radar-fullscreen", Boolean(document.fullscreenElement));
+  resize();
+}
+
+document.addEventListener("fullscreenchange", syncFullscreenLayout);
+document.addEventListener("webkitfullscreenchange", syncFullscreenLayout);
 
 document.getElementById("connect").addEventListener("submit", (event) => {
   event.preventDefault();
