@@ -27,6 +27,7 @@ const emptyEl = document.getElementById("empty");
 const roomInput = document.getElementById("room");
 const roomInput2 = document.getElementById("room2");
 const fullscreenBtn = document.getElementById("fullscreen");
+const followBtn = document.getElementById("follow");
 
 let maps = [];
 let room = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
@@ -53,6 +54,11 @@ const players = new Map();
 let self = null;
 let bomb = null;
 let lastRosterKey = "";
+let followMode = false;
+let selectedId = "self";
+let camYaw = 0;
+let camInit = false;
+const FOLLOW_ZOOM = 2.6;
 
 roomInput.value = room;
 roomInput2.value = room;
@@ -108,6 +114,10 @@ function connect(code) {
   ctCount.textContent = "0";
   tCount.textContent = "0";
   lastRosterKey = "";
+  followMode = false;
+  selectedId = "self";
+  camInit = false;
+  updateFollowButton();
   setState("CONNECTING", "sync");
 
   stopLive();
@@ -375,7 +385,7 @@ function updateRoster() {
 
   if (hasLocal) {
     list.push({
-      id: "you", name: String(local.name || "you").trim() || "you",
+      id: "you", key: "self", name: String(local.name || "you").trim() || "you",
       avatar: String(local.avatar || ""), team: localTeam,
       hp: localHp, armor: 0, weapon: "", distance: 0, isLocal: true,
     });
@@ -391,6 +401,7 @@ function updateRoster() {
     }
     list.push({
       id: player.i !== undefined ? `#${player.i}` : "?",
+      key: player.i !== undefined ? `p${player.i}` : "",
       name: String(player.name || "").trim() || "player",
       avatar: String(player.avatar || ""),
       team: Number(player.team) || 0,
@@ -412,7 +423,7 @@ function updateRoster() {
   ctCount.textContent = String(ct.length);
   tCount.textContent = String(t.length);
 
-  const key = JSON.stringify(list.map((player) => [
+  const key = selectedId + "|" + JSON.stringify(list.map((player) => [
     player.id, player.team, player.hp, player.armor, player.weapon,
     player.name, player.avatar, Math.round(player.distance),
   ]));
@@ -433,7 +444,7 @@ function rowHtml(player) {
   const avatar = player.avatar
     ? `<img src="${escapeHtml(player.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
     : "";
-  return `<div class="row">`
+  return `<div class="row${player.key === selectedId ? " selected" : ""}" data-key="${escapeHtml(player.key)}">`
     + `<div class="avatar"><span class="letter">${escapeHtml(letter)}</span>${avatar}</div>`
     + `<div class="info">`
     + `<div class="line1"><span class="nick" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>`
@@ -503,11 +514,26 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function updateSheetSide() {
+  const rect = canvas.getBoundingClientRect();
+  const view = Math.min(rect.width, rect.height)
+    * (document.body.classList.contains("radar-fullscreen") ? 0.99 : 0.94);
+  const mapTop = rect.top + (rect.height - view) / 2;
+  const mapBottom = mapTop + view;
+  const freeTop = mapTop;
+  const freeBottom = window.innerHeight - mapBottom;
+  // Prefer the bottom sheet unless the top margin is clearly larger.
+  const bottomWins = freeBottom + 120 >= freeTop;
+  document.body.classList.toggle("sheet-bottom", bottomWins);
+  document.body.classList.toggle("sheet-top", !bottomWins);
+}
+
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   canvas.width = Math.max(1, Math.floor(rect.width * dpr));
   canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  updateSheetSide();
 }
 
 function frame(now) {
@@ -535,6 +561,18 @@ function frame(now) {
     self.yaw += shortestAngle(self.tyaw - self.yaw) * blend;
   }
 
+  if (followMode) {
+    const target = followTarget();
+    if (target) {
+      const yaw = Number(target.yaw) || 0;
+      if (!camInit) {
+        camYaw = yaw;
+        camInit = true;
+      }
+      camYaw += shortestAngle(yaw - camYaw) * (1 - Math.exp(-dt / 0.07));
+    }
+  }
+
   draw(now);
 }
 
@@ -543,6 +581,38 @@ function shortestAngle(delta) {
   if (d > 180) d -= 360;
   if (d < -180) d += 360;
   return d;
+}
+
+function followTarget() {
+  if (!followMode) return null;
+  if (selectedId === "self") return self;
+  return players.get(selectedId) || self || null;
+}
+
+function updateFollowButton() {
+  followBtn.classList.toggle("active", followMode);
+  followBtn.setAttribute("aria-pressed", followMode ? "true" : "false");
+}
+
+function selectPlayer(key) {
+  if (!key) return;
+  selectedId = key;
+  followMode = true;
+  camInit = false;
+  updateFollowButton();
+  lastRosterKey = "";
+  updateRoster();
+}
+
+function toggleFollow() {
+  followMode = !followMode;
+  if (followMode) {
+    camInit = false;
+    if (!selectedId) selectedId = "self";
+  }
+  updateFollowButton();
+  lastRosterKey = "";
+  updateRoster();
 }
 
 function draw(now) {
@@ -560,29 +630,68 @@ function draw(now) {
   const unit = Math.max(0.7, Math.min(3.2, view / 420));
   const ox = (width - view) / 2;
   const oy = (height - view) / 2;
-
-  ctx.fillStyle = "#14171e";
-  ctx.fillRect(ox, oy, view, view);
-
-  if (mapImage && mapImage.complete) ctx.drawImage(mapImage, ox, oy, view, view);
+  const cx = width / 2;
+  const cy = height / 2;
 
   if (!mapDef) {
+    ctx.fillStyle = "#14171e";
+    ctx.fillRect(ox, oy, view, view);
     hint(width, height, mapLoading ? "loading map" : "");
     return;
   }
 
   const scale = mapDef.scale || 1;
-  const point = (x, y) => [
+  const base = (x, y) => [
     ox + ((x - mapDef.pos_x) / (MAP_SIZE * scale)) * view,
     oy + ((mapDef.pos_y - y) / (MAP_SIZE * scale)) * view,
   ];
+
+  const follow = followMode ? followTarget() : null;
+  const following = Boolean(follow);
+  let followX = 0;
+  let followY = 0;
+  let phi = 0;
+  if (following) {
+    [followX, followY] = base(follow.x, follow.y);
+    phi = ((camYaw - 90) * Math.PI) / 180;
+  }
+
+  const fromBase = (bx, by) => {
+    if (!following) return [bx, by];
+    const dx = bx - followX;
+    const dy = by - followY;
+    const cos = Math.cos(phi);
+    const sin = Math.sin(phi);
+    return [
+      cx + (dx * cos - dy * sin) * FOLLOW_ZOOM,
+      cy + (dx * sin + dy * cos) * FOLLOW_ZOOM,
+    ];
+  };
+  const point = (x, y) => fromBase(...base(x, y));
+
+  ctx.fillStyle = "#14171e";
+  ctx.fillRect(ox, oy, view, view);
+
+  if (mapImage && mapImage.complete) {
+    if (following) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(phi);
+      ctx.scale(FOLLOW_ZOOM, FOLLOW_ZOOM);
+      ctx.translate(-followX, -followY);
+      ctx.drawImage(mapImage, ox, oy, view, view);
+      ctx.restore();
+    } else {
+      ctx.drawImage(mapImage, ox, oy, view, view);
+    }
+  }
 
   ctx.font = `600 ${Math.round(11 * unit)}px Inter, sans-serif`;
   ctx.fillStyle = "rgba(216, 184, 74, .75)";
   for (const [label, pair] of Object.entries(mapDef.sites || {})) {
     if (!Array.isArray(pair) || pair.length < 2) continue;
-    ctx.fillText(label.toUpperCase(), ox + Number(pair[0]) * view + 3,
-                 oy + Number(pair[1]) * view - 3);
+    const [x, y] = fromBase(ox + Number(pair[0]) * view, oy + Number(pair[1]) * view);
+    ctx.fillText(label.toUpperCase(), x + 3, y - 3);
   }
 
   if (!snapshot) {
@@ -593,13 +702,22 @@ function draw(now) {
   for (const p of players.values()) {
     const [x, y] = point(p.x, p.y);
     const color = p.sameTeam ? TEAM_COLOR : ENEMY_COLOR;
-    cone(x, y, p.yaw, color, 9 * unit, 3.5 * unit, 2 * unit);
+    const markerYaw = following ? p.yaw - camYaw + 90 : p.yaw;
+    cone(x, y, markerYaw, color, 9 * unit, 3.5 * unit, 2 * unit);
     dot(x, y, 3.2 * unit, color);
+    if (following && p === follow) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 8 * unit, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 
   if (self) {
     const [x, y] = point(self.x, self.y);
-    arrow(x, y, self.yaw, SELF_COLOR, 8 * unit, 4 * unit, 4.5 * unit);
+    const markerYaw = following ? self.yaw - camYaw + 90 : self.yaw;
+    arrow(x, y, markerYaw, SELF_COLOR, 8 * unit, 4 * unit, 4.5 * unit);
   }
 
   if (bomb && Number.isFinite(bomb.x) && Number.isFinite(bomb.y)) {
@@ -694,14 +812,18 @@ document.getElementById("empty-form").addEventListener("submit", (event) => {
 fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 const shell = document.querySelector(".shell");
-document.getElementById("toggle-ct").addEventListener("click", () => {
-  shell.classList.toggle("show-ct");
-  shell.classList.remove("show-t");
+document.getElementById("toggle-teams").addEventListener("click", () => {
+  shell.classList.toggle("show-teams");
+  updateSheetSide();
 });
-document.getElementById("toggle-t").addEventListener("click", () => {
-  shell.classList.toggle("show-t");
-  shell.classList.remove("show-ct");
-});
+followBtn.addEventListener("click", toggleFollow);
+
+for (const body of [ctBody, tBody]) {
+  body.addEventListener("click", (event) => {
+    const row = event.target.closest(".row");
+    if (row) selectPlayer(row.dataset.key);
+  });
+}
 
 roomInput.addEventListener("input", () => sanitize(roomInput));
 roomInput2.addEventListener("input", () => sanitize(roomInput2));
@@ -727,10 +849,14 @@ window.__radar = () => ({
   self,
   map: mapDef,
   snapshot,
+  follow: followMode,
+  selected: selectedId,
+  target: followMode ? followTarget() : null,
+  camYaw,
 });
 
 // Forces one frame for visual QA when rAF is paused (background tab).
 window.__radarDraw = () => {
   lastFrame = performance.now();
-  draw(lastFrame);
+  frame(lastFrame);
 };

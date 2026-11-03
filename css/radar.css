@@ -70,6 +70,7 @@
 }
 
 .icon:hover { color: var(--text); border-color: var(--accent); }
+.icon.active { color: var(--accent); border-color: var(--accent); }
 .panel-toggle { display: none; }
 
 .matchbar {
@@ -154,7 +155,11 @@
   gap: 8px;
   padding: 7px 0;
   border-bottom: 1px solid rgba(37, 42, 54, .55);
+  cursor: pointer;
 }
+
+.row:hover { background: rgba(140, 191, 255, .04); }
+.row.selected { background: rgba(140, 191, 255, .08); }
 
 .avatar {
   position: relative;
@@ -329,7 +334,7 @@ body.radar-fullscreen #map { cursor: pointer; }
     position: absolute;
     top: 8px;
     bottom: 8px;
-    width: min(250px, calc(100vw - 24px));
+    width: min(250px, 45vw);
     z-index: 6;
     border: 1px solid var(--border);
   }
@@ -337,13 +342,29 @@ body.radar-fullscreen #map { cursor: pointer; }
   .team-panel.ct { left: 8px; }
   .team-panel.t { right: 8px; }
 
-  .shell.show-ct .team-panel.ct { display: block; }
-  .shell.show-t .team-panel.t { display: block; }
+  .shell.show-teams .team-panel { display: block; }
 
   .panel-toggle { display: grid; }
   .mark { display: none; }
   .connect { margin-left: 0; flex: 1; }
   .connect input { flex: 1; width: auto; }
+}
+
+@media (max-width: 700px) {
+  .team-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    height: min(42vh, 300px);
+    top: auto;
+    bottom: auto;
+  }
+
+  .team-panel.ct { right: 50%; margin-right: 4px; }
+  .team-panel.t { left: 50%; margin-left: 4px; }
+
+  .sheet-bottom .team-panel { bottom: 8px; }
+  .sheet-top .team-panel { top: 8px; }
 }
 
 @media (max-width: 520px) {
