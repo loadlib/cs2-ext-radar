@@ -299,7 +299,17 @@ body.radar-fullscreen #map { cursor: pointer; }
 .empty form {
   display: flex;
   gap: 6px;
-  width: min(320px, 100%);
+  width: 100%;
+}
+
+.empty-box { width: min(320px, 100%); }
+
+.empty-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  color: var(--muted);
 }
 
 .empty input { flex: 1; }

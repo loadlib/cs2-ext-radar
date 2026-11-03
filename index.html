@@ -23,12 +23,16 @@
     </form>
   </main>
   <script>
+    const params = new URLSearchParams(location.search);
+    const initial = (params.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    const input = document.getElementById("room");
+    if (initial) input.value = initial;
+
     document.getElementById("connect").addEventListener("submit", (event) => {
       event.preventDefault();
-      const room = document.getElementById("room").value.trim().toUpperCase();
+      const room = input.value.trim().toUpperCase();
       if (room.length >= 4) location.href = `radar.html?room=${encodeURIComponent(room)}&go=1`;
     });
-    const input = document.getElementById("room");
     input.addEventListener("input", () => {
       input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
     });
