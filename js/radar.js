@@ -660,20 +660,24 @@ function sanitize(input) {
 }
 
 function toggleFullscreen() {
-  if (document.fullscreenElement) {
-    document.exitFullscreen().catch(() => {});
-  } else {
-    document.documentElement.requestFullscreen().catch(() => {});
-  }
-}
-
-function syncFullscreenLayout() {
-  document.body.classList.toggle("radar-fullscreen", Boolean(document.fullscreenElement));
+  const active = document.body.classList.toggle("radar-fullscreen");
+  fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
   resize();
 }
 
-document.addEventListener("fullscreenchange", syncFullscreenLayout);
-document.addEventListener("webkitfullscreenchange", syncFullscreenLayout);
+document.addEventListener("keydown", (event) => {
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (event.key === "Escape" && document.body.classList.contains("radar-fullscreen")) {
+    document.body.classList.remove("radar-fullscreen");
+    fullscreenBtn.setAttribute("aria-pressed", "false");
+    resize();
+  }
+  if (event.key.toLowerCase() === "f") {
+    event.preventDefault();
+    toggleFullscreen();
+  }
+});
 
 document.getElementById("connect").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -695,20 +699,6 @@ document.getElementById("toggle-ct").addEventListener("click", () => {
 document.getElementById("toggle-t").addEventListener("click", () => {
   shell.classList.toggle("show-t");
   shell.classList.remove("show-ct");
-});
-
-document.addEventListener("fullscreenchange", () => {
-  fullscreenBtn.setAttribute("aria-pressed", document.fullscreenElement ? "true" : "false");
-  resize();
-});
-
-document.addEventListener("keydown", (event) => {
-  const tag = document.activeElement?.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA") return;
-  if (event.key.toLowerCase() === "f") {
-    event.preventDefault();
-    toggleFullscreen();
-  }
 });
 
 roomInput.addEventListener("input", () => sanitize(roomInput));
