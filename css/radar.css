@@ -273,6 +273,8 @@ body.radar-fullscreen .stage {
   height: 100%;
 }
 
+body.radar-fullscreen #map { cursor: pointer; }
+
 .stage {
   position: relative;
   min-width: 0;

@@ -659,23 +659,25 @@ function sanitize(input) {
   input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 }
 
-function toggleFullscreen() {
-  const active = document.body.classList.toggle("radar-fullscreen");
+function setMapOnly(active) {
+  document.body.classList.toggle("radar-fullscreen", active);
   fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
   resize();
 }
 
-document.addEventListener("keydown", (event) => {
-  const tag = document.activeElement?.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA") return;
-  if (event.key === "Escape" && document.body.classList.contains("radar-fullscreen")) {
-    document.body.classList.remove("radar-fullscreen");
-    fullscreenBtn.setAttribute("aria-pressed", "false");
-    resize();
+function toggleFullscreen() {
+  setMapOnly(!document.body.classList.contains("radar-fullscreen"));
+}
+
+canvas.addEventListener("click", () => {
+  if (document.body.classList.contains("radar-fullscreen")) {
+    setMapOnly(false);
   }
-  if (event.key.toLowerCase() === "f") {
-    event.preventDefault();
-    toggleFullscreen();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.body.classList.contains("radar-fullscreen")) {
+    setMapOnly(false);
   }
 });
 
