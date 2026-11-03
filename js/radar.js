@@ -473,9 +473,11 @@ function updateMatch() {
   }
 
   if (liveTimes.length >= 2) {
+    const now = performance.now();
+    while (liveTimes.length && now - liveTimes[0] > 2000) liveTimes.shift();
     const span = (liveTimes[liveTimes.length - 1] - liveTimes[0]) / 1000;
     const rate = span > 0 ? (liveTimes.length - 1) / span : 0;
-    rateEl.textContent = `${rate.toFixed(0)} Hz`;
+    rateEl.textContent = liveTimes.length >= 2 ? `${rate.toFixed(0)} Hz` : "—";
   } else {
     rateEl.textContent = "—";
   }
