@@ -1,0 +1,429 @@
+{
+  "version": 1,
+  "size": 1024,
+  "maps": [
+    {
+      "name": "de_dust2",
+      "display": "Dust II",
+      "pos_x": -2476,
+      "pos_y": 3239,
+      "scale": 4.4,
+      "rotate": 1,
+      "zoom": 1.1,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_dust2.png",
+      "sections": [],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          0.8,
+          0.16
+        ],
+        "b": [
+          0.21,
+          0.12
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.62,
+          0.21
+        ],
+        "t": [
+          0.39,
+          0.91
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_dust2_radar_psd.png"
+    },
+    {
+      "name": "de_mirage",
+      "display": "Mirage",
+      "pos_x": -3230,
+      "pos_y": 1713,
+      "scale": 5,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_mirage.png",
+      "sections": [],
+      "insets": {
+        "left": 0.135,
+        "top": 0.08,
+        "right": 0.105,
+        "bottom": 0.08
+      },
+      "sites": {
+        "a": [
+          0.54,
+          0.76
+        ],
+        "b": [
+          0.23,
+          0.28
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.28,
+          0.7
+        ],
+        "t": [
+          0.87,
+          0.36
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_mirage_radar_psd.png"
+    },
+    {
+      "name": "de_inferno",
+      "display": "Inferno",
+      "pos_x": -2087,
+      "pos_y": 3870,
+      "scale": 4.9,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_inferno.png",
+      "sections": [],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          0.81,
+          0.69
+        ],
+        "b": [
+          0.49,
+          0.22
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.9,
+          0.35
+        ],
+        "t": [
+          0.1,
+          0.67
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_inferno_radar_psd.png"
+    },
+    {
+      "name": "de_ancient",
+      "display": "Ancient",
+      "pos_x": -2953,
+      "pos_y": 2164,
+      "scale": 5,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_ancient.png",
+      "sections": [],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          0.31,
+          0.25
+        ],
+        "b": [
+          0.8,
+          0.4
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.51,
+          0.17
+        ],
+        "t": [
+          0.485,
+          0.87
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_ancient_radar_psd.png"
+    },
+    {
+      "name": "de_anubis",
+      "display": "Anubis",
+      "pos_x": -2796,
+      "pos_y": 3328,
+      "scale": 5.22,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_anubis.png",
+      "sections": [],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          null,
+          null
+        ],
+        "b": [
+          null,
+          null
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.61,
+          0.22
+        ],
+        "t": [
+          0.58,
+          0.93
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_anubis_radar_psd.png"
+    },
+    {
+      "name": "de_nuke",
+      "display": "Nuke",
+      "pos_x": -3453,
+      "pos_y": 2887,
+      "scale": 7,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_nuke.png",
+      "sections": [
+        {
+          "name": "default",
+          "alt_min": -495,
+          "alt_max": 10000
+        },
+        {
+          "name": "lower",
+          "alt_min": -10000,
+          "alt_max": -495
+        }
+      ],
+      "insets": {
+        "left": 0.33,
+        "top": 0.2,
+        "right": 0.2,
+        "bottom": 0.2
+      },
+      "sites": {
+        "a": [
+          0.58,
+          0.48
+        ],
+        "b": [
+          0.58,
+          0.58
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.82,
+          0.45
+        ],
+        "t": [
+          0.19,
+          0.54
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_nuke_radar_psd.png"
+    },
+    {
+      "name": "de_train",
+      "display": "Train",
+      "pos_x": -2308,
+      "pos_y": 2078,
+      "scale": 4.082077,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_train.png",
+      "sections": [
+        {
+          "name": "default",
+          "alt_min": -50,
+          "alt_max": 20000
+        },
+        {
+          "name": "lower",
+          "alt_min": -5000,
+          "alt_max": -50
+        }
+      ],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          0.63,
+          0.49
+        ],
+        "b": [
+          0.52,
+          0.76
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.86,
+          0.77
+        ],
+        "t": [
+          0.12,
+          0.25
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_train_radar_psd.png"
+    },
+    {
+      "name": "de_vertigo",
+      "display": "Vertigo",
+      "pos_x": -3168,
+      "pos_y": 1762,
+      "scale": 4,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_vertigo.png",
+      "sections": [
+        {
+          "name": "default",
+          "alt_min": 11700,
+          "alt_max": 20000
+        },
+        {
+          "name": "lower",
+          "alt_min": -10000,
+          "alt_max": 11700
+        }
+      ],
+      "insets": {
+        "left": 0.1,
+        "top": 0.1,
+        "right": 0.2,
+        "bottom": 0.15
+      },
+      "sites": {
+        "a": [
+          0.705,
+          0.585
+        ],
+        "b": [
+          0.222,
+          0.223
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.54,
+          0.25
+        ],
+        "t": [
+          0.2,
+          0.75
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_vertigo_radar_psd.png"
+    },
+    {
+      "name": "de_overpass",
+      "display": "Overpass",
+      "pos_x": -4831,
+      "pos_y": 1781,
+      "scale": 5.2,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_overpass.png",
+      "sections": [],
+      "insets": {
+        "left": 0.0,
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0
+      },
+      "sites": {
+        "a": [
+          0.55,
+          0.23
+        ],
+        "b": [
+          0.7,
+          0.31
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.49,
+          0.2
+        ],
+        "t": [
+          0.66,
+          0.93
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_overpass_radar_psd.png"
+    },
+    {
+      "name": "de_cache",
+      "display": "Cache",
+      "pos_x": -2000,
+      "pos_y": 3250,
+      "scale": 5.5,
+      "rotate": 0,
+      "zoom": 0,
+      "size": 1024,
+      "image": "../assets/radar/maps/de_cache.png",
+      "sections": [],
+      "insets": {
+        "left": 0.16,
+        "top": 0.04,
+        "right": 0.2,
+        "bottom": 0.04
+      },
+      "sites": {
+        "a": [
+          0.325,
+          0.26
+        ],
+        "b": [
+          0.345,
+          0.79
+        ]
+      },
+      "spawns": {
+        "ct": [
+          0.09775,
+          0.473
+        ],
+        "t": [
+          0.887,
+          0.585
+        ]
+      },
+      "cdn_image": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_cache_radar_psd.png"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS2 Radar</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/radar.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span></span> CS2 RADAR</div>
+    <form class="connect" id="connect">
+      <input id="room" maxlength="6" placeholder="SESSION" autocomplete="off" spellcheck="false">
+      <button type="submit">CONNECT</button>
+    </form>
+    <div class="status" id="status">offline</div>
+  </header>
+
+  <main>
+    <canvas id="map"></canvas>
+    <section class="info">
+      <h1>SESSION <span class="mono" id="session">—</span></h1>
+      <dl>
+        <dt>map</dt><dd id="map-name">—</dd>
+        <dt>players</dt><dd id="players">0</dd>
+        <dt>round</dt><dd id="round">—</dd>
+        <dt>updated</dt><dd id="updated">—</dd>
+      </dl>
+    </section>
+    <div class="legend">
+      <span><i style="background:var(--team)"></i>team</span>
+      <span><i style="background:var(--enemy)"></i>enemy</span>
+      <span><i style="background:var(--danger)"></i>bomb</span>
+    </div>
+    <div class="empty" id="empty">
+      <div>
+        <h2>Enter a session code</h2>
+        <p>Open the cheat menu → Cloud and type the 6-character code here.</p>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/radar.js"></script>
+</body>
+</html>

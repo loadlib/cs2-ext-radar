@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS2 Radar</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <style>
+    body { align-items: center; justify-content: center; padding: 24px; }
+    .card { width: min(420px, 100%); padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p { margin: 0 0 20px; color: var(--muted); line-height: 1.5; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; text-transform: uppercase; letter-spacing: .14em; font-family: var(--font-mono); }
+    small { display: block; margin-top: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>CS2 Radar</h1>
+    <p>Enter the session code from the cheat menu. The page reads the current snapshot from GitHub.</p>
+    <form id="connect">
+      <input id="room" maxlength="6" placeholder="SESSION" autocomplete="off" spellcheck="false">
+      <button type="submit">OPEN</button>
+    </form>
+    <small>Cloud radar is delayed by the publish interval (10 s).</small>
+  </div>
+  <script>
+    document.getElementById('connect').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const room = document.getElementById('room').value.trim().toUpperCase();
+      if (room.length >= 4) location.href = `radar.html?room=${encodeURIComponent(room)}`;
+    });
+  </script>
+</body>
+</html>

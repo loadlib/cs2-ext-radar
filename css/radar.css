@@ -1,0 +1,149 @@
+html, body { height: 100%; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.brand span {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.connect {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.connect input {
+  width: 150px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.status {
+  min-width: 92px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.status.online { color: var(--success); }
+.status.offline { color: var(--danger); }
+
+main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 40%, #171b25 0, var(--bg) 70%);
+}
+
+#map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.info {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  min-width: 210px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(17, 20, 27, .92);
+  backdrop-filter: blur(6px);
+}
+
+.info h1 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.info dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 14px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.info dt { color: var(--muted); }
+.info dd { margin: 0; font-family: var(--font-mono); }
+
+.legend {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(17, 20, 27, .92);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.empty div {
+  max-width: 360px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(17, 20, 27, .92);
+}
+
+.empty h2 { margin: 0 0 6px; font-size: 15px; }
+.empty p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+@media (max-width: 720px) {
+  .topbar { gap: 8px; padding: 0 10px; }
+  .brand { font-size: 10px; }
+  .connect input { width: 110px; }
+  .info { top: 10px; left: 10px; min-width: 170px; padding: 9px 10px; }
+  .legend { left: 10px; bottom: 10px; gap: 8px; font-size: 10px; }
+}

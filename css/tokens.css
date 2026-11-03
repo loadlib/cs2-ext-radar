@@ -1,0 +1,18 @@
+:root {
+  --bg: #0b0d12;
+  --surface: #11141b;
+  --panel: #161a23;
+  --control: #1c2130;
+  --border: #262c3a;
+  --text: #d9dee9;
+  --muted: #8c93a5;
+  --accent: #7c9cff;
+  --enemy: #e06c75;
+  --team: #6fa8ff;
+  --success: #6fcf97;
+  --danger: #e06c75;
+  --radius: 8px;
+  --gap: 8px;
+  --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", monospace;
+}
