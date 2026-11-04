@@ -1,8 +1,4 @@
 const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895cf23de184/raw";
-const BROKERS = [
-  "wss://broker.hivemq.com:8884/mqtt",
-  "wss://broker.emqx.io:8084/mqtt",
-];
 const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
@@ -41,7 +37,6 @@ let liveAt = 0;
 let mapDef = null;
 let mapImage = null;
 let mapLoading = false;
-let clients = [];
 let pusherSocket = null;
 let pusherTimer = 0;
 let pollTimer = 0;
@@ -123,53 +118,11 @@ function connect(code) {
   setState("CONNECTING", "sync");
 
   stopLive();
-  startLive();
   startPusher();
   startPolling();
 }
 
-function startLive() {
-  if (!window.mqtt) return;
-  for (const url of BROKERS) {
-    const c = window.mqtt.connect(url, {
-      clientId: `radar_${Math.random().toString(16).slice(2, 10)}`,
-      clean: true,
-      keepalive: 30,
-      connectTimeout: 8000,
-      reconnectPeriod: 2000,
-      protocolVersion: 4,
-    });
-    clients.push(c);
-
-    c.on("connect", () => {
-      c.subscribe(`cs2radar/${room}`, { qos: 0 });
-      if (!liveAt) setState("WAITING", "sync");
-    });
-
-    c.on("message", (topic, payload) => {
-      if (topic !== `cs2radar/${room}`) return;
-      try {
-        accept(JSON.parse(payload.toString()), true);
-      } catch (error) {
-        console.warn("payload", error);
-      }
-    });
-
-    c.on("close", () => {
-      if (Date.now() - liveAt > 2500) {
-        setState(snapshot ? "SYNC" : "WAITING", "sync");
-      }
-    });
-
-    c.on("error", () => {});
-  }
-}
-
 function stopLive() {
-  for (const c of clients) {
-    try { c.end(true); } catch (error) {}
-  }
-  clients = [];
   clearTimeout(pusherTimer);
   pusherTimer = 0;
   if (pusherSocket) {
