@@ -2,7 +2,7 @@ const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895
 const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
-window.__radarBuild = "2026-11-05.3";
+window.__radarBuild = "2026-11-06.4";
 
 const css = getComputedStyle(document.documentElement);
 const token = (name) => css.getPropertyValue(name).trim();
@@ -69,6 +69,7 @@ let pollTimer = 0;
 let pollFailures = 0;
 let nextPollAt = 0;
 let connectedAt = 0;
+let idleAt = 0;
 let tickTimer = 0;
 let raf = 0;
 let lastFrame = performance.now();
@@ -149,6 +150,7 @@ function connect(code) {
   pusherDelay = 1500;
   pollFailures = 0;
   nextPollAt = 0;
+  idleAt = 0;
   setState("CONNECTING", "sync");
 
   stopLive();
@@ -253,8 +255,20 @@ async function fetchHistory() {
   }
 }
 
+function isIdle(data) {
+  const roster = Array.isArray(data.players) ? data.players : [];
+  const hp = Number(data.local?.hp ?? 0);
+  return roster.length === 0 && hp <= 0;
+}
+
 function accept(data, live) {
   if (!data || (data.room && data.room.toUpperCase() !== room)) return;
+  if (isIdle(data)) {
+    idleAt = Date.now();
+    if (!snapshot) setState("NO SESSION", "idle");
+    return;
+  }
+  idleAt = 0;
   const ts = Number(data.ts || 0);
   if (snapshot && ts > 0 && ts <= snapshotTs) return;
 
@@ -1034,12 +1048,14 @@ tickTimer = setInterval(() => {
   if (snapshot) {
     if (liveAt && now - liveAt <= 2500) {
       setState("LIVE", "live");
-    } else if (lastSnapEpoch && now - lastSnapEpoch > 15000) {
+    } else if (lastSnapEpoch && now - lastSnapEpoch > 30000) {
       setState("STALE", "warn");
     } else {
       setState("SYNC", "sync");
     }
     updateMatch();
+  } else if (idleAt && now - idleAt < 20000) {
+    setState("NO SESSION", "idle");
   } else if (now - connectedAt > 4000) {
     setState(pollFailures >= 3 ? "NO DATA" : "WAITING",
              pollFailures >= 3 ? "off" : "sync");
