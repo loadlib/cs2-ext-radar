@@ -1,70 +1,151 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="coldbore">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS2 Radar</title>
+  <title>coldbore — live radar</title>
+  <meta name="description" content="coldbore live match radar">
+  <link rel="icon" href="favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="favicon-128.png">
+  <link rel="preload" href="fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/space-grotesk-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/radar.css">
 </head>
-<body>
-  <header class="bar">
-    <div class="mark">CS2 RADAR</div>
-    <form class="connect" id="connect">
-      <input id="room" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
-      <button type="submit">CONNECT</button>
+<body class="radar-page">
+  <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-panel" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M9 3v18"/>
+    </symbol>
+    <symbol id="i-follow" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="7"/>
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+    </symbol>
+    <symbol id="i-maximize" viewBox="0 0 24 24">
+      <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/>
+    </symbol>
+    <symbol id="i-minimize" viewBox="0 0 24 24">
+      <path d="M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5"/>
+    </symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="coldbore home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path class="ring" d="M24.34 12.11A9.2 9.2 0 1 1 19.89 7.66"/>
+        <path class="accent" d="M19.89 7.66A9.2 9.2 0 0 1 24.34 12.11"/>
+        <circle class="dot" cx="16" cy="16" r="2.8"/>
+      </svg>
+      <span class="brand-word">coldbore</span>
+    </a>
+
+    <form class="room-form" id="connect" novalidate>
+      <label class="sr-only" for="room">Session code</label>
+      <input id="room" class="input input--code" maxlength="6" placeholder="CODE"
+             autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button type="submit" class="btn btn--primary btn--sm">Connect</button>
     </form>
-    <div class="state" id="state">OFFLINE</div>
-    <button class="icon panel-toggle" id="toggle-teams" title="Teams" aria-label="Toggle CT and T panels">
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-        <path d="M2 3h5v10H2zM9 3h5v10H9z" fill="none" stroke="currentColor" stroke-width="1.3"/>
-      </svg>
-    </button>
-    <button class="icon" id="follow" title="Follow player" aria-label="Toggle player camera" aria-pressed="false">
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-        <circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M8 1v3M8 12v3M1 8h3M12 8h3" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <button class="icon" id="fullscreen" title="Map only" aria-label="Toggle map-only view">
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-        <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
+
+    <div class="state" id="state" role="status" aria-live="polite">OFFLINE</div>
+
+    <div class="top-actions">
+      <button class="icon-btn" id="toggle-teams" type="button" title="Teams"
+              aria-label="Toggle CT and T panels" aria-pressed="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg>
+      </button>
+      <button class="icon-btn" id="follow" type="button" title="Follow player"
+              aria-label="Toggle player camera" aria-pressed="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-follow"/></svg>
+      </button>
+      <button class="icon-btn" id="fullscreen" type="button" title="Map only"
+              aria-label="Toggle map-only view" aria-pressed="false">
+        <svg class="icon icon--max" aria-hidden="true"><use href="#i-maximize"/></svg>
+        <svg class="icon icon--min" aria-hidden="true"><use href="#i-minimize"/></svg>
+      </button>
+    </div>
   </header>
 
   <div class="matchbar">
-    <div class="mb"><span>map</span><b id="map-name">—</b></div>
-    <div class="mb timer"><b id="clock">—</b></div>
-    <div class="mb"><span>phase</span><b id="phase">—</b></div>
-    <div class="mb"><span>alive</span><b id="alive">—</b></div>
-    <div class="mb"><span>bomb</span><b id="bomb">—</b></div>
-    <div class="mb"><span>rate</span><b id="rate">—</b></div>
+    <div class="mb"><span class="mb-label">Map</span><b id="map-name">—</b></div>
+    <div class="mb mb--timer"><span class="mb-label">Time</span><b id="clock">—</b></div>
+    <div class="mb"><span class="mb-label">Phase</span><b id="phase">—</b></div>
+    <div class="mb"><span class="mb-label">Alive</span><b id="alive">—</b></div>
+    <div class="mb"><span class="mb-label">Bomb</span><b id="bomb">—</b></div>
+    <div class="mb mb--right"><span class="mb-label">Rate</span><b id="rate">—</b></div>
   </div>
 
-  <div class="shell">
-    <aside class="panel team-panel ct" id="ct-panel">
-      <div class="panel-head"><span class="team-name"><i class="dot"></i>CT</span><span class="mono" id="ct-count">0</span></div>
-      <div id="ct-body"></div>
+  <div class="shell" id="shell">
+    <aside class="team-panel team-panel--ct" id="ct-panel">
+      <div class="panel-head">
+        <span class="team-name"><i class="dot dot--ct"></i>CT</span>
+        <span class="count mono" id="ct-count">0</span>
+      </div>
+      <div class="roster" id="ct-body"></div>
     </aside>
 
-    <main class="stage">
-      <canvas id="map" aria-label="Live radar"></canvas>
+    <main class="stage" id="stage">
+      <canvas id="map" aria-label="Live radar map"></canvas>
+
+      <div class="map-tooltip" id="tooltip" role="tooltip" hidden>
+        <div class="tt-head">
+          <span class="tt-team" id="tt-team"></span>
+          <span class="tt-name" id="tt-name"></span>
+          <span class="tt-dist" id="tt-dist"></span>
+        </div>
+        <div class="tt-hp"><i id="tt-hp-fill"></i></div>
+        <div class="tt-meta">
+          <span id="tt-hp"></span>
+          <span id="tt-armor"></span>
+          <span id="tt-weapon"></span>
+        </div>
+      </div>
+
+      <button class="icon-btn map-exit" id="exit-fullscreen" type="button"
+              aria-label="Exit map only" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-minimize"/></svg>
+      </button>
+
       <div class="empty" id="empty">
-        <div class="empty-box">
-          <div class="empty-title">CS2 RADAR</div>
-          <form id="empty-form">
-            <input id="room2" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
-            <button type="submit">OPEN</button>
+        <div class="empty-card">
+          <div class="brand">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+              <path class="ring" d="M24.34 12.11A9.2 9.2 0 1 1 19.89 7.66"/>
+              <path class="accent" d="M19.89 7.66A9.2 9.2 0 0 1 24.34 12.11"/>
+              <circle class="dot" cx="16" cy="16" r="2.8"/>
+            </svg>
+            <span class="brand-word">coldbore</span>
+          </div>
+          <p class="empty-kicker">
+            <svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg>
+            Live radar
+          </p>
+          <h2 class="empty-title">No session</h2>
+          <form id="empty-form" class="empty-form" novalidate>
+            <label class="field-label" for="room2">Session code</label>
+            <div class="code-row">
+              <input id="room2" class="input input--code" maxlength="6" placeholder="CODE"
+                     autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button type="submit" class="btn btn--primary">Open</button>
+            </div>
           </form>
         </div>
       </div>
     </main>
 
-    <aside class="panel team-panel t" id="t-panel">
-      <div class="panel-head"><span class="team-name"><i class="dot"></i>T</span><span class="mono" id="t-count">0</span></div>
-      <div id="t-body"></div>
+    <aside class="team-panel team-panel--t" id="t-panel">
+      <div class="panel-head">
+        <span class="team-name"><i class="dot dot--t"></i>T</span>
+        <span class="count mono" id="t-count">0</span>
+      </div>
+      <div class="roster" id="t-body"></div>
     </aside>
   </div>
 

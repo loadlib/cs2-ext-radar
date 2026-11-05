@@ -1,20 +1,105 @@
+/* coldbore web tokens. One theme, shared with the ImGui menu.
+   Surfaces, accent and radii mirror src/ui/theme.h; no raw hex outside this file. */
+
 :root {
-  --bg: #0b0a14;
-  --surface: #110f23;
-  --panel: #191534;
-  --control: #211b45;
-  --border: #3c355d;
-  --text: #f5f5f5;
-  --muted: #9a92b5;
-  --accent: #eb055a;
-  --accent-ink: #0b0a14;
-  --enemy: #e06c75;
-  --team: #6fa8ff;
-  --self: #f5f5f5;
-  --bomb: #e0a35c;
-  --ok: #8fff66;
-  --bad: #f54242;
-  --radius: 0px;
-  --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    color-scheme: dark;
+
+    /* surfaces */
+    --bg: #0d0b1a;
+    --surface: #110f23;
+    --panel: #15122b;
+    --raised: #191534;
+    --control: #211b45;
+    --control-hover: #241e4a;
+    --control-active: #1a1535;
+    --border: #2b2547;
+    --border-strong: #3c355d;
+    --divider: #241e4a;
+
+    /* text */
+    --text: #f5f5f5;
+    --text-muted: #9a92b5;
+    --text-faint: #857cab;
+
+    /* state */
+    --accent: #eb055a;
+    --accent-hover: #f52a72;
+    --accent-contrast: #05040a;
+    --success: #8fff66;
+    --warning: #f5ec42;
+    --danger: #f54242;
+
+    /* teams and radar */
+    --ct: #6fa8ff;
+    --t: #e06c75;
+    --team: #6fa8ff;
+    --enemy: #e06c75;
+    --self: #f5f5f5;
+    --bomb: #f54242;
+    --map-void: #0b0a14;
+    --map-site: #f5ec42;
+    --marker-outline: rgba(0, 0, 0, 0.55);
+    --scrim: rgba(0, 0, 0, 0.62);
+
+    /* glass */
+    --glass-bg: rgba(21, 18, 43, 0.56);
+    --glass-border: rgba(245, 245, 245, 0.14);
+    --glass-highlight: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+    --glass-blur: 18px;
+    --glass-saturate: 1.45;
+
+    /* radius */
+    --radius-shell: 10px;
+    --radius-panel: 8px;
+    --radius-card: 7px;
+    --radius-control: 4px;
+    --radius-row: 3px;
+    --radius-pill: 999px;
+
+    /* space */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+    --space-8: 48px;
+
+    /* type */
+    --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+    --font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    --text-2xs: 10px;
+    --text-xs: 11px;
+    --text-sm: 12px;
+    --text-md: 13px;
+    --text-base: 14px;
+    --text-lg: 15px;
+    --text-xl: 18px;
+    --text-2xl: 24px;
+    --text-3xl: 32px;
+    --text-4xl: 40px;
+    --line-tight: 1.2;
+    --line: 1.5;
+
+    /* layout */
+    --topbar-h: 52px;
+    --matchbar-h: 40px;
+    --panel-w: 236px;
+    --page-pad: 20px;
+    --content-max: 1200px;
+
+    /* motion */
+    --dur-fast: 80ms;
+    --dur: 140ms;
+    --dur-slow: 180ms;
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+
+    /* z-index */
+    --z-nav: 100;
+    --z-drawer: 200;
+    --z-modal: 300;
+    --z-toast: 400;
 }

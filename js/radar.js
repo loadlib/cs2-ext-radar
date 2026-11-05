@@ -2,12 +2,26 @@ const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895
 const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
-const TEAM_COLOR = "#73a6f2";
-const ENEMY_COLOR = "#f24040";
-const SELF_COLOR = "#ffffff";
+
+const css = getComputedStyle(document.documentElement);
+const token = (name) => css.getPropertyValue(name).trim();
+const COLOR = {
+  team: token("--team"),
+  enemy: token("--enemy"),
+  self: token("--self"),
+  bomb: token("--bomb"),
+  mapVoid: token("--map-void"),
+  mapSite: token("--map-site"),
+  outline: token("--marker-outline"),
+  text: token("--text"),
+  muted: token("--text-muted"),
+};
+const FONT_UI = token("--font-ui");
+const FONT_MONO = token("--font-mono");
 
 const canvas = document.getElementById("map");
 const ctx = canvas.getContext("2d");
+const stage = document.getElementById("stage");
 const stateEl = document.getElementById("state");
 const mapNameEl = document.getElementById("map-name");
 const clockEl = document.getElementById("clock");
@@ -24,6 +38,16 @@ const roomInput = document.getElementById("room");
 const roomInput2 = document.getElementById("room2");
 const fullscreenBtn = document.getElementById("fullscreen");
 const followBtn = document.getElementById("follow");
+const teamsBtn = document.getElementById("toggle-teams");
+const exitBtn = document.getElementById("exit-fullscreen");
+const tooltip = document.getElementById("tooltip");
+const ttName = document.getElementById("tt-name");
+const ttTeam = document.getElementById("tt-team");
+const ttHp = document.getElementById("tt-hp");
+const ttHpFill = document.getElementById("tt-hp-fill");
+const ttArmor = document.getElementById("tt-armor");
+const ttWeapon = document.getElementById("tt-weapon");
+const ttDist = document.getElementById("tt-dist");
 
 let maps = [];
 let room = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
@@ -51,6 +75,7 @@ let bomb = null;
 let lastRosterKey = "";
 let followMode = false;
 let selectedId = "self";
+let hoveredKey = null;
 let followLast = null;
 let camYaw = 0;
 let camInit = false;
@@ -195,12 +220,12 @@ function startPolling() {
 
 async function fetchHistory() {
   if (!room) return;
+  if (liveAt && Date.now() - liveAt < 2500) return;
   try {
     const response = await fetch(`${GIST}/radar_${room}.json?ts=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (data.room && data.room.toUpperCase() !== room) return;
-    if (Date.now() - liveAt < 2500) return;
     if (Number(data.ts || 0) > snapshotTs) accept(data, false);
   } catch (error) {
     if (!liveAt && !snapshot) setState("WAITING", "sync");
@@ -238,6 +263,7 @@ function ensureMap(name) {
   mapDef = next;
   mapImage = null;
   mapNameEl.textContent = next.display || name;
+  updateCanvasLabel();
   loadMapImage(next.image, next.cdn_image);
 }
 
@@ -286,10 +312,12 @@ function updateEntities() {
     const entry = players.get(id);
     if (!entry) {
       players.set(id, {
-        x, y, yaw: Number(player.yaw) || 0,
+        id, x, y, yaw: Number(player.yaw) || 0,
         tx: x, ty: y, tyaw: Number(player.yaw) || 0,
         vx: 0, vy: 0, team: Number(player.team) || 0,
         visible: player.visible !== false, at: now,
+        name: String(player.name || "player"), hp: Number(player.hp) || 0,
+        armor: Number(player.armor) || 0, weapon: String(player.weapon || ""),
       });
       continue;
     }
@@ -302,18 +330,26 @@ function updateEntities() {
     entry.tyaw = Number(player.yaw) || 0;
     entry.team = Number(player.team) || 0;
     entry.visible = player.visible !== false;
+    entry.name = String(player.name || "player");
+    entry.hp = Number(player.hp) || 0;
+    entry.armor = Number(player.armor) || 0;
+    entry.weapon = String(player.weapon || "");
     entry.at = now;
   }
 
   for (const id of players.keys()) {
     if (!seen.has(id)) players.delete(id);
   }
+  if (hoveredKey && hoveredKey !== "self" && !players.has(hoveredKey)) {
+    hoveredKey = null;
+    hideTooltip();
+  }
 
   const lx = Number(local.x);
   const ly = Number(local.y);
   if (Number.isFinite(lx) && Number.isFinite(ly)) {
     if (!self) {
-      self = { x: lx, y: ly, yaw: Number(local.yaw) || 0 };
+      self = { id: "self", x: lx, y: ly, yaw: Number(local.yaw) || 0 };
     } else {
       const dt = Math.max(0.05, (now - (self.at || now)) / 1000);
       self.vx = (lx - self.x) / dt;
@@ -324,6 +360,7 @@ function updateEntities() {
     self.tyaw = Number(local.yaw) || 0;
     self.team = Number(local.team) || 0;
     self.hp = Number(local.hp) || 0;
+    self.name = String(local.name || "you");
     self.at = now;
   }
 
@@ -399,6 +436,7 @@ function updateRoster() {
     : `<div class="empty-team">no players</div>`;
   tBody.innerHTML = t.length ? t.map(rowHtml).join("")
     : `<div class="empty-team">no players</div>`;
+  updateCanvasLabel();
 }
 
 function rowHtml(player) {
@@ -406,10 +444,11 @@ function rowHtml(player) {
   const hpClass = hp <= 25 ? "low" : hp <= 50 ? "mid" : "";
   const dist = player.isLocal || !player.distance ? "" : `${Math.round(player.distance)} m`;
   const letter = (player.name[0] || "?").toUpperCase();
+  const selected = player.key === selectedId;
   const avatar = player.avatar
-    ? `<img src="${escapeHtml(player.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    ? `<img src="${escapeHtml(player.avatar)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">`
     : "";
-  return `<div class="row${player.key === selectedId ? " selected" : ""}" data-key="${escapeHtml(player.key)}">`
+  return `<div class="row${selected ? " selected" : ""}" data-key="${escapeHtml(player.key)}" role="button" tabindex="0" aria-pressed="${selected}" aria-label="Follow ${escapeHtml(player.name)}">`
     + `<div class="avatar"><span class="letter">${escapeHtml(letter)}</span>${avatar}</div>`
     + `<div class="info">`
     + `<div class="line1"><span class="nick" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>`
@@ -477,6 +516,13 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[ch]));
+}
+
+function updateCanvasLabel() {
+  const map = mapDef && mapDef.display ? mapDef.display : "unknown";
+  const tracked = players.size + (self ? 1 : 0);
+  canvas.setAttribute("aria-label",
+    `Live radar, ${map} map, ${tracked} players tracked${self ? ", local player visible" : ""}`);
 }
 
 function resize() {
@@ -550,6 +596,7 @@ function updateFollowButton() {
 
 function selectPlayer(key) {
   if (!key) return;
+  clearHover();
   selectedId = key;
   followMode = true;
   followLast = null;
@@ -559,7 +606,66 @@ function selectPlayer(key) {
   updateRoster();
 }
 
+function hideTooltip() {
+  tooltip.hidden = true;
+}
+
+function clearHover() {
+  hoveredKey = null;
+  hideTooltip();
+}
+
+function showTooltip(player, x, y) {
+  const isSelf = player.id === "self";
+  const hp = Math.max(0, Math.min(100, Number(player.hp) || 0));
+  const team = Number(player.team) || 0;
+  if (team === 3) ttTeam.dataset.team = "ct";
+  else if (team === 2) ttTeam.dataset.team = "t";
+  else ttTeam.removeAttribute("data-team");
+  ttName.textContent = isSelf ? `${player.name || "you"} (you)` : (player.name || "player");
+  ttHp.textContent = `${Math.round(hp)} HP`;
+  ttHpFill.className = hp <= 25 ? "low" : hp <= 50 ? "mid" : "";
+  ttHpFill.style.width = `${hp}%`;
+  ttArmor.textContent = player.armor ? `${player.armor} ARM` : "";
+  ttWeapon.textContent = player.weapon || "";
+  const distance = (!isSelf && self)
+    ? Math.round(Math.hypot(player.x - self.x, player.y - self.y) * 0.0254)
+    : 0;
+  ttDist.textContent = distance ? `${distance} m` : "";
+
+  tooltip.hidden = false;
+  const width = tooltip.offsetWidth;
+  const height = tooltip.offsetHeight;
+  const maxX = Math.max(8, stage.clientWidth - width - 8);
+  const maxY = Math.max(8, stage.clientHeight - height - 8);
+  let left = x + 14;
+  let top = y + 14;
+  if (left > maxX) left = x - width - 14;
+  if (top > maxY) top = y - height - 14;
+  tooltip.style.left = `${Math.max(8, Math.min(left, maxX))}px`;
+  tooltip.style.top = `${Math.max(8, Math.min(top, maxY))}px`;
+}
+
+function hitTest(x, y) {
+  let best = null;
+  let bestDistance = 14;
+  for (const player of players.values()) {
+    if (player.sx === undefined) continue;
+    const distance = Math.hypot(player.sx - x, player.sy - y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = player;
+    }
+  }
+  if (self && self.sx !== undefined) {
+    const distance = Math.hypot(self.sx - x, self.sy - y);
+    if (distance < bestDistance) best = self;
+  }
+  return best;
+}
+
 function toggleFollow() {
+  clearHover();
   followMode = !followMode;
   if (followMode) {
     followLast = null;
@@ -590,7 +696,7 @@ function draw(now) {
   const cy = height / 2;
 
   if (!mapDef) {
-    ctx.fillStyle = "#14171e";
+    ctx.fillStyle = COLOR.mapVoid;
     ctx.fillRect(ox, oy, view, view);
     hint(width, height, mapLoading ? "loading map" : "");
     return;
@@ -625,7 +731,7 @@ function draw(now) {
   };
   const point = (x, y) => fromBase(...base(x, y));
 
-  ctx.fillStyle = "#14171e";
+  ctx.fillStyle = COLOR.mapVoid;
   ctx.fillRect(ox, oy, view, view);
 
   if (mapImage && mapImage.complete) {
@@ -642,13 +748,20 @@ function draw(now) {
     }
   }
 
-  ctx.font = `600 ${Math.round(11 * unit)}px Inter, sans-serif`;
-  ctx.fillStyle = "rgba(216, 184, 74, .75)";
+  ctx.font = `600 ${Math.round(11 * unit)}px ${FONT_UI}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = COLOR.outline;
+  ctx.fillStyle = COLOR.mapSite;
+  ctx.globalAlpha = 0.85;
   for (const [label, pair] of Object.entries(mapDef.sites || {})) {
     if (!Array.isArray(pair) || pair.length < 2) continue;
     const [x, y] = fromBase(ox + Number(pair[0]) * view, oy + Number(pair[1]) * view);
+    ctx.strokeText(label.toUpperCase(), x + 3, y - 3);
     ctx.fillText(label.toUpperCase(), x + 3, y - 3);
   }
+  ctx.globalAlpha = 1;
 
   if (!snapshot) {
     hint(width, height, "waiting for the session");
@@ -657,31 +770,43 @@ function draw(now) {
 
   for (const p of players.values()) {
     const [x, y] = point(p.x, p.y);
-    const color = p.sameTeam ? TEAM_COLOR : ENEMY_COLOR;
+    p.sx = x;
+    p.sy = y;
+    const color = p.sameTeam ? COLOR.team : COLOR.enemy;
     const markerYaw = following ? p.yaw - camYaw + 90 : p.yaw;
+    if (p === follow) glow(x, y, 8 * unit, color);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
     cone(x, y, markerYaw, color, 9 * unit, 3.5 * unit, 2 * unit);
-    dot(x, y, 3.2 * unit, color);
-    if (following && p === follow) {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(x, y, 8 * unit, 0, Math.PI * 2);
-      ctx.stroke();
+    ctx.restore();
+    if (p.sameTeam) {
+      dot(x, y, 3.4 * unit, color);
+    } else {
+      diamond(x, y, 3.8 * unit, color);
     }
   }
 
   if (self) {
     const [x, y] = point(self.x, self.y);
+    self.sx = x;
+    self.sy = y;
     const markerYaw = following ? self.yaw - camYaw + 90 : self.yaw;
-    arrow(x, y, markerYaw, SELF_COLOR, 8 * unit, 4 * unit, 4.5 * unit);
+    if (self === follow) glow(x, y, 9 * unit, COLOR.text);
+    arrow(x, y, markerYaw, COLOR.self, 8 * unit, 4 * unit, 4.5 * unit);
   }
 
   if (bomb && Number.isFinite(bomb.x) && Number.isFinite(bomb.y)) {
     const [x, y] = point(bomb.x, bomb.y);
     const left = Math.max(0, bomb.timer - (Date.now() - bomb.at) / 1000);
-    ctx.fillStyle = "#ff5950";
-    ctx.fillRect(x - 4 * unit, y - 4 * unit, 8 * unit, 8 * unit);
-    ctx.font = `${Math.round(10 * unit)}px 'JetBrains Mono', Consolas, monospace`;
+    ctx.fillStyle = COLOR.outline;
+    ctx.fillRect(x - 4.5 * unit, y - 4.5 * unit, 9 * unit, 9 * unit);
+    ctx.fillStyle = COLOR.bomb;
+    ctx.fillRect(x - 3.5 * unit, y - 3.5 * unit, 7 * unit, 7 * unit);
+    ctx.font = `${Math.round(10 * unit)}px ${FONT_MONO}`;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = COLOR.outline;
+    ctx.strokeText(String(Math.ceil(left)), x + 8 * unit, y - 5 * unit);
+    ctx.fillStyle = COLOR.bomb;
     ctx.fillText(String(Math.ceil(left)), x + 8 * unit, y - 5 * unit);
   }
 }
@@ -711,22 +836,67 @@ function arrow(x, y, yaw, color, tip, back, half) {
   ctx.lineTo(x - dx * back - -dy * half, y - dy * back - dx * half);
   ctx.closePath();
   ctx.fill();
+  ctx.strokeStyle = COLOR.outline;
+  ctx.lineWidth = 1;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
+
+function diamond(x, y, radius, color) {
+  const path = (r) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r, y);
+    ctx.closePath();
+  };
+  ctx.fillStyle = COLOR.outline;
+  path(radius + 1);
+  ctx.fill();
+  ctx.fillStyle = color;
+  path(radius);
+  ctx.fill();
 }
 
 function dot(x, y, radius, color) {
+  ctx.fillStyle = COLOR.outline;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 1, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
 }
 
+function glow(x, y, radius, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  const layers = [
+    [radius + 6, 0.035],
+    [radius + 3, 0.06],
+    [radius + 1, 0.09],
+  ];
+  for (const [r, alpha] of layers) {
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function hint(width, height, text) {
   if (!text) return;
-  ctx.fillStyle = "rgba(215, 219, 229, .45)";
-  ctx.font = "11px 'JetBrains Mono', Consolas, monospace";
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = COLOR.muted;
+  ctx.font = `11px ${FONT_MONO}`;
   ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
   ctx.fillText(text, width / 2, height - 20);
   ctx.textAlign = "left";
+  ctx.globalAlpha = 1;
 }
 
 function sanitize(input) {
@@ -736,6 +906,8 @@ function sanitize(input) {
 function setMapOnly(active) {
   document.body.classList.toggle("radar-fullscreen", active);
   fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  exitBtn.hidden = !active;
+  if (active) clearHover();
   resize();
 }
 
@@ -766,15 +938,51 @@ document.getElementById("empty-form").addEventListener("submit", (event) => {
 });
 
 fullscreenBtn.addEventListener("click", toggleFullscreen);
+exitBtn.addEventListener("click", () => setMapOnly(false));
 
 const shell = document.querySelector(".shell");
-document.getElementById("toggle-teams").addEventListener("click", () => {
-  shell.classList.toggle("show-teams");
+teamsBtn.addEventListener("click", () => {
+  const open = shell.classList.toggle("show-teams");
+  teamsBtn.setAttribute("aria-pressed", open ? "true" : "false");
 });
 followBtn.addEventListener("click", toggleFollow);
 
+canvas.addEventListener("pointermove", (event) => {
+  if (event.pointerType === "touch") return;
+  if (document.body.classList.contains("radar-fullscreen")) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const player = hitTest(x, y);
+  if (!player) {
+    clearHover();
+    return;
+  }
+  hoveredKey = player.id || "self";
+  showTooltip(player, x, y);
+});
+
+canvas.addEventListener("pointerleave", clearHover);
+
+canvas.addEventListener("pointerdown", (event) => {
+  if (document.body.classList.contains("radar-fullscreen")) return;
+  const rect = canvas.getBoundingClientRect();
+  const player = hitTest(event.clientX - rect.left, event.clientY - rect.top);
+  if (!player) return;
+  event.preventDefault();
+  clearHover();
+  selectPlayer(player.id || "self");
+});
+
 for (const body of [ctBody, tBody]) {
   body.addEventListener("pointerdown", (event) => {
+    const row = event.target.closest(".row");
+    if (!row) return;
+    event.preventDefault();
+    selectPlayer(row.dataset.key);
+  });
+  body.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
     const row = event.target.closest(".row");
     if (!row) return;
     event.preventDefault();

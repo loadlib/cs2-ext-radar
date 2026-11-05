@@ -1,40 +1,100 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="coldbore">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS2 Radar</title>
+  <title>coldbore — live radar</title>
+  <meta name="description" content="coldbore live match radar">
+  <link rel="icon" href="favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="favicon-128.png">
+  <link rel="preload" href="fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/space-grotesk-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/base.css">
-  <style>
-    body { align-items: center; justify-content: center; padding: 20px; }
-    main { width: min(320px, 100%); }
-    h1 { margin: 0 0 16px; font-size: 15px; font-weight: 600; letter-spacing: .06em; }
-    form { display: flex; gap: 6px; }
-    input { flex: 1; text-transform: uppercase; letter-spacing: .16em; font-family: var(--font-mono); }
-  </style>
+  <link rel="stylesheet" href="css/connect.css">
 </head>
-<body>
-  <main>
-    <h1>CS2 RADAR</h1>
-    <form id="connect">
-      <input id="room" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Session code">
-      <button type="submit">OPEN</button>
-    </form>
+<body class="connect-page">
+  <main class="connect-shell">
+    <section class="connect-card" aria-labelledby="brand-title">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path class="ring" d="M24.34 12.11A9.2 9.2 0 1 1 19.89 7.66"/>
+          <path class="accent" d="M19.89 7.66A9.2 9.2 0 0 1 24.34 12.11"/>
+          <circle class="dot" cx="16" cy="16" r="2.8"/>
+        </svg>
+        <span class="brand-word" id="brand-title">coldbore</span>
+      </div>
+
+      <p class="connect-kicker">Live match radar</p>
+      <h1 class="connect-title">Open a session</h1>
+
+      <form id="connect" class="connect-form" novalidate>
+        <label class="field-label" for="room">Session code</label>
+        <div class="code-row">
+          <input id="room" class="input code-input" maxlength="6" placeholder="CODE"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false"
+                 aria-describedby="connect-error">
+          <button type="submit" class="btn btn--primary">Open radar</button>
+        </div>
+        <p class="form-error" id="connect-error" role="alert"></p>
+      </form>
+
+      <div class="connect-meta">
+        <span class="dot dot--idle"></span>
+        <span>No session connected</span>
+        <span class="version">v1.0</span>
+      </div>
+    </section>
+
+    <aside class="preview" aria-hidden="true">
+      <div class="preview-frame">
+        <img src="https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars/de_mirage_radar_psd.png" alt="" width="1024" height="1024"
+             onerror="this.closest('.preview').classList.add('no-map'); this.remove()">
+        <div class="preview-scrim"></div>
+        <div class="preview-label"><span class="dot dot--live"></span>MIRAGE</div>
+        <div class="preview-fallback">NO MAP</div>
+      </div>
+      <div class="preview-caption"><span>MAP PREVIEW</span><span>1024</span></div>
+    </aside>
   </main>
+
+  <footer class="connect-footer">
+    <span>coldbore · local session</span>
+    <span>EXTERNAL</span>
+  </footer>
+
   <script>
     const params = new URLSearchParams(location.search);
     const initial = (params.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
     const input = document.getElementById("room");
+    const form = document.getElementById("connect");
+    const error = document.getElementById("connect-error");
+
+    const sanitize = () => {
+      input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    };
+
     if (initial) input.value = initial;
 
-    document.getElementById("connect").addEventListener("submit", (event) => {
-      event.preventDefault();
-      const room = input.value.trim().toUpperCase();
-      if (room.length >= 4) location.href = `radar.html?room=${encodeURIComponent(room)}&go=1`;
-    });
     input.addEventListener("input", () => {
-      input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+      sanitize();
+      input.removeAttribute("aria-invalid");
+      error.textContent = "";
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sanitize();
+      if (input.value.length < 4) {
+        input.setAttribute("aria-invalid", "true");
+        error.textContent = "Code is too short.";
+        input.focus();
+        return;
+      }
+      input.removeAttribute("aria-invalid");
+      error.textContent = "";
+      location.href = `radar.html?room=${encodeURIComponent(input.value)}&go=1`;
     });
   </script>
 </body>
