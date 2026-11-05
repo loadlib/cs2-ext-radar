@@ -66,6 +66,7 @@ body.radar-page {
 .state.live { color: var(--text); }
 .state.live::before { background: var(--success); }
 .state.sync::before { background: var(--accent); }
+.state.warn::before { background: var(--warning); }
 .state.off::before { background: var(--danger); }
 
 .top-actions {

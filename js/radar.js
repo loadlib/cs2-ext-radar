@@ -2,6 +2,7 @@ const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895
 const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
+window.__radarBuild = "2026-11-05.3";
 
 const css = getComputedStyle(document.documentElement);
 const token = (name) => css.getPropertyValue(name).trim();
@@ -63,7 +64,11 @@ let mapImage = null;
 let mapLoading = false;
 let pusherSocket = null;
 let pusherTimer = 0;
+let pusherDelay = 1500;
 let pollTimer = 0;
+let pollFailures = 0;
+let nextPollAt = 0;
+let connectedAt = 0;
 let tickTimer = 0;
 let raf = 0;
 let lastFrame = performance.now();
@@ -140,6 +145,10 @@ function connect(code) {
   followLast = null;
   camInit = false;
   updateFollowButton();
+  connectedAt = Date.now();
+  pusherDelay = 1500;
+  pollFailures = 0;
+  nextPollAt = 0;
   setState("CONNECTING", "sync");
 
   stopLive();
@@ -172,6 +181,7 @@ function startPusher() {
     if (!message || !message.event) return;
 
     if (message.event === "pusher:connection_established") {
+      pusherDelay = 1500;
       socket.send(JSON.stringify({
         event: "pusher:subscribe",
         data: { channel: `room-${room}` },
@@ -179,7 +189,8 @@ function startPusher() {
       return;
     }
     if (message.event === "pusher_internal:subscription_succeeded") {
-      if (!liveAt) setState("WAITING", "sync");
+      pusherDelay = 1500;
+      if (!snapshot && !liveAt) setState("WAITING", "sync");
       return;
     }
     if (message.event === "pusher:ping") {
@@ -204,9 +215,11 @@ function startPusher() {
     if (pusherSocket !== socket) return;
     pusherSocket = null;
     clearTimeout(pusherTimer);
+    const delay = pusherDelay;
+    pusherDelay = Math.min(pusherDelay * 2, 30000);
     pusherTimer = setTimeout(() => {
       if (room === forRoom) startPusher();
-    }, 1500);
+    }, delay);
   };
 
   socket.onerror = () => {};
@@ -214,12 +227,15 @@ function startPusher() {
 
 function startPolling() {
   clearInterval(pollTimer);
+  pollFailures = 0;
+  nextPollAt = 0;
   pollTimer = setInterval(fetchHistory, 5000);
   fetchHistory();
 }
 
 async function fetchHistory() {
   if (!room) return;
+  if (Date.now() < nextPollAt) return;
   if (liveAt && Date.now() - liveAt < 2500) return;
   try {
     const response = await fetch(`${GIST}/radar_${room}.json?ts=${Date.now()}`, { cache: "no-store" });
@@ -227,8 +243,13 @@ async function fetchHistory() {
     const data = await response.json();
     if (data.room && data.room.toUpperCase() !== room) return;
     if (Number(data.ts || 0) > snapshotTs) accept(data, false);
+    pollFailures = 0;
+    nextPollAt = 0;
   } catch (error) {
-    if (!liveAt && !snapshot) setState("WAITING", "sync");
+    pollFailures += 1;
+    // Back off on 403/404/offline instead of hammering the gist every 5 s.
+    nextPollAt = Date.now() + Math.min(5000 * 2 ** Math.min(pollFailures, 3), 15000);
+    if (!snapshot) setState("WAITING", "sync");
   }
 }
 
@@ -995,12 +1016,34 @@ roomInput2.addEventListener("input", () => sanitize(roomInput2));
 
 new ResizeObserver(() => resize()).observe(canvas);
 
+// A background tab or a dropped connection must not stay stale: retry as soon
+// as the page is visible or the network comes back.
+window.addEventListener("online", () => {
+  nextPollAt = 0;
+  fetchHistory();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  nextPollAt = 0;
+  fetchHistory();
+});
+
 tickTimer = setInterval(() => {
   if (!room) return;
-  if (liveAt && Date.now() - liveAt > 2500) {
-    setState(snapshot ? "SYNC" : "WAITING", "sync");
+  const now = Date.now();
+  if (snapshot) {
+    if (liveAt && now - liveAt <= 2500) {
+      setState("LIVE", "live");
+    } else if (lastSnapEpoch && now - lastSnapEpoch > 15000) {
+      setState("STALE", "warn");
+    } else {
+      setState("SYNC", "sync");
+    }
+    updateMatch();
+  } else if (now - connectedAt > 4000) {
+    setState(pollFailures >= 3 ? "NO DATA" : "WAITING",
+             pollFailures >= 3 ? "off" : "sync");
   }
-  if (snapshot) updateMatch();
 }, 1000);
 
 loadMaps().then(() => {
