@@ -1,8 +1,8 @@
 const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895cf23de184/raw";
-const PUSHER = { key: "1a7af9826748d4b5bce1", cluster: "eu" };
+const PUSHER = { key: "8317659f6f67388add63", cluster: "eu" };
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
-window.__radarBuild = "2026-11-06.4";
+window.__radarBuild = "2026-11-06.5";
 
 const css = getComputedStyle(document.documentElement);
 const token = (name) => css.getPropertyValue(name).trim();
