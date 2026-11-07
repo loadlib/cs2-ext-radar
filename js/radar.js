@@ -1,8 +1,9 @@
 const GIST = "https://gist.githubusercontent.com/loadlib/ab3496688642bc8f1c0a895cf23de184/raw";
 const PUSHER = { key: "8317659f6f67388add63", cluster: "eu" };
+const RELAY = "wss://cs2-radar-relay.as2213004.workers.dev";
 const MAP_SIZE = 1024;
 const INTERP_MS = 120;
-window.__radarBuild = "2026-11-06.5";
+window.__radarBuild = "2026-11-07.6";
 
 const css = getComputedStyle(document.documentElement);
 const token = (name) => css.getPropertyValue(name).trim();
@@ -65,6 +66,9 @@ let mapLoading = false;
 let pusherSocket = null;
 let pusherTimer = 0;
 let pusherDelay = 1500;
+let relaySocket = null;
+let relayTimer = 0;
+let relayDelay = 1000;
 let pollTimer = 0;
 let pollFailures = 0;
 let nextPollAt = 0;
@@ -148,6 +152,7 @@ function connect(code) {
   updateFollowButton();
   connectedAt = Date.now();
   pusherDelay = 1500;
+  relayDelay = 1000;
   pollFailures = 0;
   nextPollAt = 0;
   idleAt = 0;
@@ -155,6 +160,7 @@ function connect(code) {
 
   stopLive();
   startPusher();
+  startRelay();
   startPolling();
 }
 
@@ -164,6 +170,13 @@ function stopLive() {
   if (pusherSocket) {
     const socket = pusherSocket;
     pusherSocket = null;
+    try { socket.close(); } catch (error) {}
+  }
+  clearTimeout(relayTimer);
+  relayTimer = 0;
+  if (relaySocket) {
+    const socket = relaySocket;
+    relaySocket = null;
     try { socket.close(); } catch (error) {}
   }
 }
@@ -221,6 +234,40 @@ function startPusher() {
     pusherDelay = Math.min(pusherDelay * 2, 30000);
     pusherTimer = setTimeout(() => {
       if (room === forRoom) startPusher();
+    }, delay);
+  };
+
+  socket.onerror = () => {};
+}
+
+function startRelay() {
+  if (!RELAY || !window.WebSocket) return;
+  const forRoom = room;
+  const socket = new WebSocket(`${RELAY}/ws?room=${encodeURIComponent(room)}`);
+  relaySocket = socket;
+
+  socket.onopen = () => {
+    relayDelay = 1000;
+  };
+
+  socket.onmessage = (event) => {
+    if (room !== forRoom) return;
+    try {
+      const data = JSON.parse(event.data);
+      accept(data, true);
+    } catch (error) {
+      console.warn("relay payload", error);
+    }
+  };
+
+  socket.onclose = () => {
+    if (relaySocket !== socket) return;
+    relaySocket = null;
+    clearTimeout(relayTimer);
+    const delay = relayDelay;
+    relayDelay = Math.min(relayDelay * 2, 30000);
+    relayTimer = setTimeout(() => {
+      if (room === forRoom) startRelay();
     }, delay);
   };
 
